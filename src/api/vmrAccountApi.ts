@@ -41,6 +41,18 @@ export class VmrAccountApi {
     }
   }
 
+  public async devLogin(userId: string): Promise<void> {
+    const response = await fetch("/api/account/dev-login", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    if (!response.ok) {
+      throw new Error("Development passwordless login is not enabled.");
+    }
+  }
+
   public async logout(): Promise<void> {
     const response = await fetch("/api/account/logout", {
       method: "POST",

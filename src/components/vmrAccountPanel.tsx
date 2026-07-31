@@ -13,15 +13,21 @@ export function VmrAccountPanel(): JSX.Element {
   const [error, setError] = useState<string>();
   const api = new VmrAccountApi();
   const database = useVmrDatabaseStatus();
+  const isPasswordlessDevHost =
+    typeof window !== "undefined" && isDevelopmentHost(window.location);
 
   async function authenticate(mode: "login" | "register"): Promise<void> {
     setError(undefined);
     setAuthenticating(true);
     try {
-      if (mode === "register") {
+      if (isPasswordlessDevHost) {
+        await api.devLogin(email.trim());
+      } else if (mode === "register") {
         await api.register(email.trim(), password);
+        await api.login(email.trim(), password);
+      } else {
+        await api.login(email.trim(), password);
       }
-      await api.login(email.trim(), password);
       window.location.reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Authentication failed.");
@@ -80,46 +86,63 @@ export function VmrAccountPanel(): JSX.Element {
   return (
     <View className="mt-3">
       <DatabaseStatus status={database.status} />
+      {isPasswordlessDevHost ? (
+        <Text className="mt-1 mb-2 text-sm text-text-secondary">
+          Development login: enter a user ID or email. No password is required.
+        </Text>
+      ) : null}
       <TextInput
         autoCapitalize="none"
         autoComplete="email"
         inputMode="email"
-        placeholder="Email"
+        placeholder={isPasswordlessDevHost ? "User ID or email" : "Email"}
         value={email}
         onChangeText={setEmail}
         className="w-full px-3 py-3 text-base border rounded border-border-neutral text-text-primary bg-background-default"
       />
-      <TextInput
-        autoCapitalize="none"
-        autoComplete="current-password"
-        placeholder="Password"
-        secureTextEntry={true}
-        value={password}
-        onChangeText={setPassword}
-        className="w-full px-3 py-3 mt-3 text-base border rounded border-border-neutral text-text-primary bg-background-default"
-      />
+      {!isPasswordlessDevHost ? (
+        <TextInput
+          autoCapitalize="none"
+          autoComplete="current-password"
+          placeholder="Password"
+          secureTextEntry={true}
+          value={password}
+          onChangeText={setPassword}
+          className="w-full px-3 py-3 mt-3 text-base border rounded border-border-neutral text-text-primary bg-background-default"
+        />
+      ) : null}
       {error ? <Text className="mt-2 text-sm text-text-error">{error}</Text> : null}
       <View className="flex-row justify-center mt-3">
         <Button
           name="vmr-account-login"
           kind="purple"
-          disabled={!email.trim() || !password}
+          disabled={!email.trim() || (!isPasswordlessDevHost && !password)}
           onClick={() => authenticate("login")}
         >
           Sign In
         </Button>
-        <View className="ml-3">
-          <Button
-            name="vmr-account-register"
-            kind="purple"
-            disabled={!email.trim() || password.length < 10}
-            onClick={() => authenticate("register")}
-          >
-            Register
-          </Button>
-        </View>
+        {!isPasswordlessDevHost ? (
+          <View className="ml-3">
+            <Button
+              name="vmr-account-register"
+              kind="purple"
+              disabled={!email.trim() || password.length < 10}
+              onClick={() => authenticate("register")}
+            >
+              Register
+            </Button>
+          </View>
+        ) : null}
       </View>
     </View>
+  );
+}
+
+function isDevelopmentHost(location: Location): boolean {
+  const hostname = location.hostname.toLowerCase();
+  return (
+    ["localhost", "127.0.0.1", "vmr-lift.local"].includes(hostname) ||
+    ["5229", "7240", "8081"].includes(location.port)
   );
 }
 
