@@ -14,7 +14,6 @@ import WatchConnectivity
   private var lastStorageReceivedFromWatch: String?
   private var pendingClearAuth = false
 
-  private var pendingFinishWorkoutCompletion: ((Bool) -> Void)?
   private var pendingLogsCompletion: ((String?) -> Void)?
 
   // MARK: - Setup
@@ -66,20 +65,30 @@ import WatchConnectivity
       return
     }
 
-    var message: [String: Any] = ["storage": filteredStorageJson]
+    var message: [String: Any] = [:]
+    if let compressed = StoragePayloadCompression.compressIfLarge(filteredStorageJson) {
+      Logger.wc.info("sendStorage: compressing payload \(filteredStorageJson.utf8.count) -> \(compressed.count) bytes")
+      message["storageZ"] = compressed
+    } else {
+      message["storage"] = filteredStorageJson
+    }
     if pendingClearAuth {
       pendingClearAuth = false
       message["clearAuth"] = true
     }
 
     if session.isReachable {
-      session.sendMessage(message, replyHandler: nil)
+      session.sendMessage(message, replyHandler: nil, errorHandler: { error in
+        Logger.wc.error("sendStorage: sendMessage failed: \(error)")
+        Self.logPayloadTooLarge(error: error, storageJson: filteredStorageJson, path: "sendMessage")
+      })
       Logger.wc.info("sendStorage: sendMessage (reachable)")
     } else {
       do {
         try session.updateApplicationContext(message)
         Logger.wc.info("sendStorage: updateApplicationContext")
       } catch {
+        Self.logPayloadTooLarge(error: error, storageJson: filteredStorageJson, path: "applicationContext")
         if session.isPaired {
           session.transferUserInfo(message)
           Logger.wc.info("sendStorage: transferUserInfo fallback")
@@ -89,6 +98,18 @@ import WatchConnectivity
       }
     }
     lastStorageSentToWatch = filteredStorageJson
+  }
+
+  private static func logPayloadTooLarge(error: Error, storageJson: String, path: String) {
+    guard (error as? WCError)?.code == .payloadTooLarge else { return }
+    let size = storageJson.utf8.count
+    let breakdown = StoragePayloadCompression.sizeBreakdown(storageJson)
+    Logger.wc.info("sendStorage: payload too large via \(path): total=\(size) bytes, \(breakdown)")
+    LiftosaurEventReporterImpl.shared.logTelemetry(name: "phone-storage-too-large", extra: [
+      "path": path,
+      "size": String(size),
+      "breakdown": breakdown,
+    ])
   }
 
   @objc public func sendAuth(token: String, expiresAt: Double, userId: String?) {
@@ -134,36 +155,63 @@ import WatchConnectivity
     lastStorageSentToWatch = nil
   }
 
-  @objc public func sendFinishWorkout(completion: @escaping (Bool) -> Void) {
+  @objc public func sendFinishWorkout(save: Bool, completion: @escaping (Bool) -> Void) {
     guard let session = session, session.activationState == .activated,
           session.isPaired && session.isWatchAppInstalled else {
+      logFinishWorkoutTelemetry(save: save, watchSaved: false, reason: "not-paired", path: "unavailable")
       completion(false); return
     }
-    let message: [String: Any] = ["type": "finishWorkout"]
+    let message: [String: Any] = ["type": "finishWorkout", "saveToHealth": save]
     if session.isReachable {
       var didComplete = false
-      let done: (Bool) -> Void = { watchSaved in
+      let done: (Bool, String?, String) -> Void = { watchSaved, reason, path in
         DispatchQueue.main.async {
-          guard !didComplete else { return }
+          guard !didComplete else {
+            // The 20s timeout closure always fires, so a second call here is normal — only a real
+            // reply landing after the timeout completed is notable (the phone may have
+            // double-saved); surface that in telemetry instead of dropping it silently.
+            if path == "final-reply" || path == "legacy-ack" {
+              self.logFinishWorkoutTelemetry(save: save, watchSaved: watchSaved, reason: reason, path: "late-\(path)")
+            }
+            return
+          }
           didComplete = true
           let cleanup: [String: Any] = ["type": "finishWorkout", "phoneSaved": !watchSaved]
           session.transferUserInfo(cleanup)
+          self.logFinishWorkoutTelemetry(save: save, watchSaved: watchSaved, reason: reason, path: path)
           completion(watchSaved)
         }
       }
-      DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-        done(false)
+      // The watch holds the reply until the HK session is actually ended and saved (typically
+      // 2-8s); 20s stays under WCSession's own reply window while still bounding the fallback.
+      DispatchQueue.main.asyncAfter(deadline: .now() + 20) {
+        done(false, "watch-result-timeout", "timeout")
       }
       session.sendMessage(message, replyHandler: { reply in
-        done((reply["watchSaved"] as? Bool) ?? false)
-      }, errorHandler: { _ in
-        done(false)
+        let watchSaved = (reply["watchSaved"] as? Bool) ?? false
+        // A reply without "final" comes from a watch build that still answers with an optimistic
+        // prediction before ending the session — keep trusting it as before.
+        let isFinal = (reply["final"] as? Bool) ?? false
+        done(watchSaved, reply["reason"] as? String, isFinal ? "final-reply" : "legacy-ack")
+      }, errorHandler: { error in
+        let nsError = error as NSError
+        done(false, "send-error:\(nsError.domain).\(nsError.code)", "error")
       })
     } else {
       let cleanup: [String: Any] = ["type": "finishWorkout", "phoneSaved": true]
       session.transferUserInfo(cleanup)
+      logFinishWorkoutTelemetry(save: save, watchSaved: false, reason: "not-reachable", path: "unreachable")
       completion(false)
     }
+  }
+
+  private func logFinishWorkoutTelemetry(save: Bool, watchSaved: Bool, reason: String?, path: String) {
+    var extra: [String: String] = [
+      "result": watchSaved ? "watch-saved" : (save ? "phone-fallback" : "none"),
+      "path": path,
+    ]
+    if let reason = reason { extra["reason"] = reason }
+    LiftosaurEventReporterImpl.shared.logTelemetry(name: "phone-hk-finish", extra: extra)
   }
 
   @objc public func sendDiscardWorkout() {
@@ -271,7 +319,7 @@ extension LiftosaurWatchImpl {
       replyHandler?(["success": true])
 
     case "watchStorage":
-      if let storageJson = message["storage"] as? String {
+      if let storageJson = StoragePayloadCompression.extractStorageJson(message) {
         if lastStorageReceivedFromWatch == storageJson {
           replyHandler?(["success": true])
           return

@@ -453,6 +453,7 @@ export function EditProgramUiHelpers_addInstance(
       text: "",
       tags: [],
       line: 0,
+      exerciseVariations: [{ exerciseType, name, isCurrent: true }],
       evaluatedSetVariations: [
         {
           sets: [
@@ -525,9 +526,14 @@ export function EditProgramUiHelpers_changeCurrentInstancePosition(
   return new ProgramToPlanner(evaluatedProgram, settings).convertToPlanner({ reorder });
 }
 
+// Matches by key (the exercise's identity), not fullName. They diverge only for exercise variations:
+// the key ignores the `!` current marker, so two instances of the same ladder can share a key while their
+// fullNames differ. Matching all same-key instances is what "change all instances" means — a fullName match
+// would silently skip the divergent ones (splitting a ladder on add/remove/reorder). For single-name
+// exercises the two are equivalent, since the name can't diverge across instances.
 export function EditProgramUiHelpers_changeAllInstances(
   planner: IPlannerProgram,
-  fullName: string,
+  key: string,
   settings: ISettings,
   shouldValidate: boolean,
   cb: (exercise: IPlannerProgramExercise) => void
@@ -536,7 +542,7 @@ export function EditProgramUiHelpers_changeAllInstances(
     Program_evaluateCachedPlanner({ ...Program_create("Temp"), planner }, settings)
   );
   PP_iterate2(evaluatedProgram.weeks, (e) => {
-    if (e.fullName === fullName) {
+    if (e.key === key) {
       cb(e);
     }
   });

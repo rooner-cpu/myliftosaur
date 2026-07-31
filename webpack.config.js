@@ -153,6 +153,8 @@ const mainConfig = {
   entry: {
     main: ["./src/main.tsx", "./src/index.css"],
     login: ["./src/login.tsx", "./src/index.css"],
+    resetpassword: ["./src/resetPassword.tsx", "./src/index.css"],
+    verifyemail: ["./src/verifyEmail.tsx", "./src/index.css"],
     exercise: ["./src/exercise.tsx", "./src/index.css"],
     repmax: ["./src/repmax.tsx", "./src/index.css"],
     allexercises: ["./src/allExercises.tsx", "./src/index.css"],
@@ -333,6 +335,10 @@ const mainConfig = {
         to: `terms.html`,
       },
       {
+        from: `src/support.html`,
+        to: `support.html`,
+      },
+      {
         from: `src/licenses.html`,
         to: `licenses.html`,
       },
@@ -343,6 +349,10 @@ const mainConfig = {
       {
         from: `src/notification.m4r`,
         to: `notification.m4r`,
+      },
+      {
+        from: `src/set-timer-end.m4r`,
+        to: `set-timer-end.m4r`,
       },
       {
         from: "icons",
@@ -372,9 +382,21 @@ const mainConfig = {
         from: "apple-app-site-association",
         to: ".well-known",
       },
+      {
+        from: "openai-apps-challenge",
+        to: ".well-known/openai-apps-challenge",
+        toType: "file",
+      },
     ]),
   ],
   mode: process.env.NODE_ENV === "production" ? "production" : "development",
+  watchOptions: {
+    ignored: [
+      path.join(__dirname, "worktrees", "**"),
+      path.join(__dirname, ".claude", "worktrees", "**"),
+      "**/node_modules/**",
+    ],
+  },
   devServer: {
     devMiddleware: {
       index: false, // specify to enable root proxying
@@ -526,6 +548,14 @@ const mainConfig = {
         secure: false,
       },
       "/login": {
+        target: localapi,
+        secure: false,
+      },
+      "/verifyemail": {
+        target: localapi,
+        secure: false,
+      },
+      "/resetpassword": {
         target: localapi,
         secure: false,
       },

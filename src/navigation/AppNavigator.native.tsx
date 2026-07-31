@@ -29,6 +29,7 @@ import {
   NavScreenUnits,
   NavScreenSetupEquipment,
   NavScreenSetupPlates,
+  NavScreenHearAboutUs,
   NavScreenProgramSelectOnboarding,
   NavScreenProgramsOnboarding,
   NavScreenProgramPreviewOnboarding,
@@ -47,6 +48,7 @@ import {
   NavScreenMuscleGroups,
   NavScreenStats,
   NavScreenMeasurements,
+  NavScreenSleepNutrition,
   NavScreenExerciseStats,
   NavScreenApiKeys,
   NavScreenRecentImports,
@@ -70,6 +72,8 @@ import { NavModalSetSplit } from "./modals/NavModalSetSplit";
 import { NavModalPlannerSettings } from "./modals/NavModalPlannerSettings";
 import { NavModalMuscleGroupMusclePicker } from "./modals/NavModalMuscleGroupMusclePicker";
 import { NavModalAccount } from "./modals/NavModalAccount";
+import { NavModalEmailAuth } from "./modals/NavModalEmailAuth";
+import { NavModalChangePassword } from "./modals/NavModalChangePassword";
 import { NavModalCreateProgram } from "./modals/NavModalCreateProgram";
 import { NavModalImportFromLink } from "./modals/NavModalImportFromLink";
 import { NavModalProgramInfo } from "./modals/NavModalProgramInfo";
@@ -79,6 +83,9 @@ import { NavModalProgramPreviewMuscles } from "./modals/NavModalProgramPreviewMu
 import { NavModalAmrap } from "./modals/NavModalAmrap";
 import { NavModalNextWorkout } from "./modals/NavModalNextWorkout";
 import { NavModalEditTarget } from "./modals/NavModalEditTarget";
+import { NavModalSetTimer } from "./modals/NavModalSetTimer";
+import { NavModalSetTimerEdit } from "./modals/NavModalSetTimerEdit";
+import { NavModalRoundingInfo } from "./modals/NavModalRoundingInfo";
 import { NavModalGraphs } from "./modals/NavModalGraphs";
 import { NavModalStatsSettings } from "./modals/NavModalStatsSettings";
 import { NavModal1RM } from "./modals/NavModal1RM";
@@ -116,6 +123,7 @@ import { NavModalDebug } from "./modals/NavModalDebug";
 import { NavModalEditMuscleGroups } from "./modals/NavModalEditMuscleGroups";
 import { NavModalImportFromOtherApps } from "./modals/NavModalImportFromOtherApps";
 import { NavModalSignupRequest } from "./modals/NavModalSignupRequest";
+import { NavModalHearAboutUs } from "./modals/NavModalHearAboutUs";
 import { NavModalSubscriptionInfo } from "./modals/NavModalSubscriptionInfo";
 import { NavModalTextInput } from "./modals/NavModalTextInput";
 import { NavModalWhatsnew } from "./modals/NavModalWhatsnew";
@@ -172,6 +180,11 @@ function OnboardingStackScreen(): JSX.Element {
       <OnboardingStack.Screen name="units" component={NavScreenUnits} />
       <OnboardingStack.Screen name="setupequipment" component={NavScreenSetupEquipment} />
       <OnboardingStack.Screen name="setupplates" component={NavScreenSetupPlates} />
+      <OnboardingStack.Screen
+        name="hearaboutus"
+        component={NavScreenHearAboutUs}
+        options={{ headerShown: true, header: NavHeader }}
+      />
       <OnboardingStack.Screen name="programselect" component={NavScreenProgramSelectOnboarding} />
       <OnboardingStack.Screen
         name="programs"
@@ -290,6 +303,7 @@ function MeStackScreen(): JSX.Element {
       <MeStack.Screen name="muscleGroups" component={NavScreenMuscleGroups} />
       <MeStack.Screen name="stats" component={NavScreenStats} />
       <MeStack.Screen name="measurements" component={NavScreenMeasurements} />
+      <MeStack.Screen name="sleepNutrition" component={NavScreenSleepNutrition} />
       <MeStack.Screen name="exerciseStats" component={NavScreenExerciseStats} />
       <MeStack.Screen name="apiKeys" component={NavScreenApiKeys} />
       <MeStack.Screen name="recentImports" component={NavScreenRecentImports} />
@@ -318,7 +332,14 @@ function MainTabsScreen(): JSX.Element {
   );
 }
 
-const onboardingScreens: IScreen[] = ["first", "units", "setupequipment", "setupplates", "programselect"];
+const onboardingScreens: IScreen[] = [
+  "first",
+  "units",
+  "setupequipment",
+  "setupplates",
+  "hearaboutus",
+  "programselect",
+];
 
 const InitialScreenContext = createContext<IScreen | undefined>(undefined);
 
@@ -370,6 +391,8 @@ export function AppNavigator(props: { initialScreen?: IScreen }): JSX.Element {
           <RootStack.Screen name="plannerSettingsModal" component={NavModalPlannerSettings} />
           <RootStack.Screen name="muscleGroupMusclePickerModal" component={NavModalMuscleGroupMusclePicker} />
           <RootStack.Screen name="accountModal" component={NavModalAccount} />
+          <RootStack.Screen name="emailAuthModal" component={NavModalEmailAuth} />
+          <RootStack.Screen name="changePasswordModal" component={NavModalChangePassword} />
           <RootStack.Screen name="createProgramModal" component={NavModalCreateProgram} />
           <RootStack.Screen name="importFromLinkModal" component={NavModalImportFromLink} />
           <RootStack.Screen name="programInfoModal" component={NavModalProgramInfo} />
@@ -380,6 +403,21 @@ export function AppNavigator(props: { initialScreen?: IScreen }): JSX.Element {
             name="editSetTargetModal"
             component={NavModalEditTarget}
             options={{ sheetResizeAnimationEnabled: false }}
+          />
+          <RootStack.Screen
+            name="setTimerModal"
+            component={NavModalSetTimer}
+            options={{ sheetAllowedDetents: "fitToContents" }}
+          />
+          <RootStack.Screen
+            name="setTimerEditModal"
+            component={NavModalSetTimerEdit}
+            options={{ sheetAllowedDetents: "fitToContents" }}
+          />
+          <RootStack.Screen
+            name="roundingInfoModal"
+            component={NavModalRoundingInfo}
+            options={{ sheetAllowedDetents: "fitToContents" }}
           />
           <RootStack.Screen name="programPreviewMusclesModal" component={NavModalProgramPreviewMuscles} />
           <RootStack.Screen name="nextWorkoutModal" component={NavModalNextWorkout} />
@@ -434,6 +472,7 @@ export function AppNavigator(props: { initialScreen?: IScreen }): JSX.Element {
           <RootStack.Screen name="editMuscleGroupsModal" component={NavModalEditMuscleGroups} />
           <RootStack.Screen name="importFromOtherAppsModal" component={NavModalImportFromOtherApps} />
           <RootStack.Screen name="signupRequestModal" component={NavModalSignupRequest} />
+          <RootStack.Screen name="hearAboutUsModal" component={NavModalHearAboutUs} />
           <RootStack.Screen name="subscriptionInfoModal" component={NavModalSubscriptionInfo} />
           <RootStack.Screen name="textInputModal" component={NavModalTextInput} />
           <RootStack.Screen

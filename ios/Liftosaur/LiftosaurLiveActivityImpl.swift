@@ -5,6 +5,15 @@ import UIKit
 
 private let kAppGroup = "group.com.liftosaur.workout"
 
+// A Live Activity "Complete Set" tap can't optimistically update the widget
+// (next-set/exercise depends on JS-only logic: supersets, update scripts,
+// AMRAP, etc.), so it round-trips through JS. The intent posts this Darwin
+// notification to drain the request immediately instead of waiting for the
+// 0.5s polling timer, and waits on `completeSetAckRequestId` (written below
+// after the activity actually re-renders) so iOS keeps the process alive
+// until the refresh lands.
+private let kCompleteSetRequestedDarwinName = "com.liftosaur.workout.completeSetRequested"
+
 private let liveActivityLogger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.liftosaur.www",
                                         category: "liveactivity")
 
@@ -31,10 +40,33 @@ private let liveActivityLogger = Logger(subsystem: Bundle.main.bundleIdentifier 
       name: UIApplication.didBecomeActiveNotification,
       object: nil
     )
+    registerCompleteSetDarwinObserver()
   }
 
   @objc private func handleDidBecomeActive() {
     processPendingWorkout()
+  }
+
+  private func registerCompleteSetDarwinObserver() {
+    let center = CFNotificationCenterGetDarwinNotifyCenter()
+    let observer = Unmanaged.passUnretained(self).toOpaque()
+    CFNotificationCenterAddObserver(
+      center,
+      observer,
+      { _, _, _, _, _ in
+        DispatchQueue.main.async {
+          LiftosaurLiveActivityImpl.shared.handleCompleteSetRequested()
+        }
+      },
+      kCompleteSetRequestedDarwinName as CFString,
+      nil,
+      .deliverImmediately
+    )
+  }
+
+  @objc private func handleCompleteSetRequested() {
+    startPollingIfNeeded()
+    tick()
   }
 
   @objc public func isSupported() -> Bool {
@@ -58,7 +90,8 @@ private let liveActivityLogger = Logger(subsystem: Bundle.main.bundleIdentifier 
     }
     startPollingIfNeeded()
     cacheExerciseImageIfNeeded(contentState.historyEntryState?.exerciseImageUrl)
-    Task { await LiveActivityManager.shared.update(contentState: contentState) }
+    let ackRequestId = state["completeSetRequestId"] as? String
+    Task { await LiveActivityManager.shared.update(contentState: contentState, ackRequestId: ackRequestId) }
   }
 
   private func cacheExerciseImageIfNeeded(_ urlString: String?) {
@@ -152,12 +185,39 @@ private let liveActivityLogger = Logger(subsystem: Bundle.main.bundleIdentifier 
 
     if let entryIndex = sharedDefaults.object(forKey: "completeSetEntryIndex") as? Int,
        let setIndex = sharedDefaults.object(forKey: "completeSetSetIndex") as? Int {
+      let requestId = sharedDefaults.string(forKey: "completeSetRequestId")
       sharedDefaults.removeObject(forKey: "completeSetEntryIndex")
       sharedDefaults.removeObject(forKey: "completeSetSetIndex")
       sharedDefaults.removeObject(forKey: "completeSetStateVersion")
       sharedDefaults.removeObject(forKey: "completeSetRestTimer")
       sharedDefaults.removeObject(forKey: "completeSetRestTimerSince")
-      emit(["action": "completeSet", "entryIndex": entryIndex, "setIndex": setIndex])
+      sharedDefaults.removeObject(forKey: "completeSetRequestId")
+      var event: [String: Any] = ["action": "completeSet", "entryIndex": entryIndex, "setIndex": setIndex]
+      if let requestId = requestId {
+        event["completeSetRequestId"] = requestId
+      }
+      emit(event)
+    }
+
+    if let entryIndex = sharedDefaults.object(forKey: "recordSetTimerEntryIndex") as? Int,
+       let setIndex = sharedDefaults.object(forKey: "recordSetTimerSetIndex") as? Int {
+      let elapsedSeconds = sharedDefaults.integer(forKey: "recordSetTimerElapsedSeconds")
+      let keepTiming = sharedDefaults.bool(forKey: "recordSetTimerKeepTiming")
+      let requestId = sharedDefaults.string(forKey: "completeSetRequestId")
+      sharedDefaults.removeObject(forKey: "recordSetTimerEntryIndex")
+      sharedDefaults.removeObject(forKey: "recordSetTimerSetIndex")
+      sharedDefaults.removeObject(forKey: "recordSetTimerElapsedSeconds")
+      sharedDefaults.removeObject(forKey: "recordSetTimerKeepTiming")
+      sharedDefaults.removeObject(forKey: "completeSetRequestId")
+      var event: [String: Any] = ["action": "recordSetTimer",
+            "entryIndex": entryIndex,
+            "setIndex": setIndex,
+            "elapsedSeconds": elapsedSeconds,
+            "keepTiming": keepTiming]
+      if let requestId = requestId {
+        event["completeSetRequestId"] = requestId
+      }
+      emit(event)
     }
 
     if let action = sharedDefaults.string(forKey: "adjustRestTimerAction") {
@@ -180,6 +240,11 @@ private let liveActivityLogger = Logger(subsystem: Bundle.main.bundleIdentifier 
     eventEmitter?(event as NSDictionary)
   }
 
+  // Lets the LiveActivityManager's scheduled tasks (which live in a separate type) push an action to JS.
+  func emitAction(_ event: [String: Any]) {
+    emit(event)
+  }
+
   // MARK: - NSDictionary → ContentState
 
   static func contentState(from dict: NSDictionary) -> WorkoutAttributes.ContentState? {
@@ -188,7 +253,20 @@ private let liveActivityLogger = Logger(subsystem: Bundle.main.bundleIdentifier 
     if let rest = dict["rest"] as? NSDictionary {
       let since = (rest["restTimerSince"] as? NSNumber)?.intValue ?? 0
       let timer = (rest["restTimer"] as? NSNumber)?.intValue ?? 0
-      restTimer = LiveActivityRest(restTimerSince: since, restTimer: timer)
+      let isAuto = (rest["isAuto"] as? NSNumber)?.boolValue ?? false
+      restTimer = LiveActivityRest(restTimerSince: since, restTimer: timer, isAuto: isAuto)
+    }
+    var setTimer: LiveActivitySetTimer?
+    if let st = dict["setTimer"] as? NSDictionary {
+      setTimer = LiveActivitySetTimer(
+        setTimerSince: (st["setTimerSince"] as? NSNumber)?.intValue ?? 0,
+        setTimer: (st["setTimer"] as? NSNumber)?.intValue ?? 0,
+        isOverflow: (st["isOverflow"] as? NSNumber)?.boolValue ?? false,
+        isCompleted: (st["isCompleted"] as? NSNumber)?.boolValue ?? false,
+        entryIndex: (st["entryIndex"] as? NSNumber)?.intValue ?? 0,
+        setIndex: (st["setIndex"] as? NSNumber)?.intValue ?? 0,
+        restTimer: (st["restTimer"] as? NSNumber)?.intValue ?? 0
+      )
     }
     var entry: HistoryEntryState?
     if let e = dict["entry"] as? NSDictionary {
@@ -222,6 +300,7 @@ private let liveActivityLogger = Logger(subsystem: Bundle.main.bundleIdentifier 
       historyEntryState: entry,
       workoutStartTimestamp: workoutStartTimestamp,
       restTimer: restTimer,
+      setTimer: setTimer,
       stateVersion: nil
     )
   }
@@ -233,6 +312,7 @@ actor LiveActivityManager {
 
   private var restTimerTask: Task<Void, Never>?
   private var workoutTimerTask: Task<Void, Never>?
+  private var setTimerTask: Task<Void, Never>?
 
   private var currentState: WorkoutAttributes.ContentState?
   private(set) var stateVersion: Int = 0
@@ -288,10 +368,14 @@ actor LiveActivityManager {
       let target = Double(restTimer.restTimerSince + restTimer.restTimer * 1000) / 1000.0
       return Date(timeIntervalSince1970: target)
     }
+    if let setTimer = state.setTimer, !setTimer.isOverflow, setTimer.setTimer > 0 {
+      let target = Double(setTimer.setTimerSince + setTimer.setTimer * 1000) / 1000.0
+      return Date(timeIntervalSince1970: target)
+    }
     return Date().addingTimeInterval(60)
   }
 
-  func update(contentState: WorkoutAttributes.ContentState) async {
+  func update(contentState: WorkoutAttributes.ContentState, ackRequestId: String? = nil) async {
     if contentState.workoutStartTimestamp > 0,
        contentState.workoutStartTimestamp == lastEndedWorkoutStartTimestamp {
       liveActivityLogger.info("Ignoring update for ended workout (ts=\(contentState.workoutStartTimestamp))")
@@ -305,6 +389,7 @@ actor LiveActivityManager {
 
       restTimerTask?.cancel(); restTimerTask = nil
       workoutTimerTask?.cancel(); workoutTimerTask = nil
+      setTimerTask?.cancel(); setTimerTask = nil
 
       stateVersion += 1
       let capturedVersion = stateVersion
@@ -329,6 +414,11 @@ actor LiveActivityManager {
           liveActivityLogger.info("Created new Live Activity (id=\(newActivity.id))")
         }
         pendingState = nil
+        // Ack only after the activity actually re-rendered, so the waiting
+        // CompleteSetIntent keeps the app alive until the refresh is visible.
+        if let ackRequestId = ackRequestId, let defaults = UserDefaults(suiteName: kAppGroup) {
+          defaults.set(ackRequestId, forKey: "completeSetAckRequestId")
+        }
       } catch {
         liveActivityLogger.error("Failed to update/create Live Activity: \(error.localizedDescription)")
         if let authError = error as? ActivityAuthorizationError, case .visibility = authError {
@@ -342,6 +432,11 @@ actor LiveActivityManager {
         scheduleRestTimerUpdate(restTimerSince: restTimer.restTimerSince,
                                 restTimer: restTimer.restTimer,
                                 expectedVersion: capturedVersion)
+      }
+      if let setTimer = contentState.setTimer, !setTimer.isOverflow, setTimer.setTimer > 0 {
+        scheduleSetTimerReconcile(setTimerSince: setTimer.setTimerSince,
+                                  setTimer: setTimer.setTimer,
+                                  expectedVersion: capturedVersion)
       }
       scheduleWorkoutTimeUpdates(expectedVersion: capturedVersion)
     }
@@ -363,6 +458,25 @@ actor LiveActivityManager {
         let nextStale = Date().addingTimeInterval(60)
         await activity.update(ActivityContent(state: state, staleDate: nextStale))
         liveActivityLogger.info("Live Activity updated after rest timer expired")
+      }
+    }
+  }
+
+  // When a non-overflow set timer reaches its target, the next state (rest, or the next circuit set) is
+  // JS-only logic, so we can't synthesize it natively. Instead nudge the app to reconcile + re-push so the
+  // Live Activity switches to the rest timer. This only fires while the app process is alive (foreground or
+  // the brief background window); a fully suspended app catches up via the on-foreground reconcile.
+  private func scheduleSetTimerReconcile(setTimerSince: Int, setTimer: Int, expectedVersion: Int) {
+    let target = Double(setTimerSince + setTimer * 1000) / 1000.0
+    let delay = Date(timeIntervalSince1970: target).timeIntervalSince(Date())
+    guard delay > 0 else { return }
+
+    setTimerTask = Task {
+      do { try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000)) }
+      catch { return }
+      guard stateVersion == expectedVersion else { return }
+      await MainActor.run {
+        LiftosaurLiveActivityImpl.shared.emitAction(["action": "checkSetTimer"])
       }
     }
   }
@@ -397,6 +511,7 @@ actor LiveActivityManager {
     pendingState = nil
     restTimerTask?.cancel(); restTimerTask = nil
     workoutTimerTask?.cancel(); workoutTimerTask = nil
+    setTimerTask?.cancel(); setTimerTask = nil
     currentState = nil
     guard let activity = currentActivity else {
       currentActivityID = nil

@@ -13,11 +13,12 @@ import {
   Thunk_pushScreen,
   Thunk_openManageSubscriptions,
   Thunk_iapRefreshActiveSubscriptions,
+  Thunk_fetchAccounts,
 } from "../ducks/thunks";
 import { INavCommon } from "../models/state";
 import { useNavOptions } from "../navigation/useNavOptions";
 import { Button } from "./button";
-import { IAccount, Account_getAll } from "../models/account";
+import { IAccount } from "../models/account";
 import { AdminDebug_isDebugAccountId } from "../models/adminDebug";
 import { IPartialStorage } from "../types";
 import { GroupHeader } from "./groupHeader";
@@ -30,6 +31,8 @@ import { IconTrash } from "./icons/iconTrash";
 import { IconApple } from "./icons/iconApple";
 import { IconSpinner } from "./icons/iconSpinner";
 import { Dialog_confirm, Dialog_prompt, Dialog_alert } from "../utils/dialog";
+import { EmailAuthButton } from "./account";
+import { navigateToModal } from "../navigation/navigationService";
 import { Tailwind_colors, Tailwind_semantic } from "../utils/tailwindConfig";
 import { IIapActiveSubscription } from "../utils/iapAdapter";
 import { SubscriptionPlan_derive, ISubscriptionPlanKind, IDerivedSubscriptionPlan } from "../utils/subscriptionPlan";
@@ -40,6 +43,7 @@ declare let __HOST__: string;
 interface IProps {
   email?: string;
   userId?: string;
+  nosync?: boolean;
   storage: IPartialStorage;
   subscriptionStatus?: IIapActiveSubscription[];
   subscriptionStatusLoading?: boolean;
@@ -64,9 +68,11 @@ export function ScreenAccount(props: IProps): JSX.Element {
   };
 
   function refetchAccounts(): void {
-    Account_getAll().then((accounts) => {
-      setOtherAccounts(accounts.filter((a) => a.id !== currentAccountId));
-    });
+    props.dispatch(
+      Thunk_fetchAccounts((accounts) => {
+        setOtherAccounts(accounts.filter((a) => a.id !== currentAccountId));
+      })
+    );
   }
 
   useEffect(() => {
@@ -147,6 +153,11 @@ export function ScreenAccount(props: IProps): JSX.Element {
         }
         addons={
           <View>
+            {AdminDebug_isDebugAccountId(currentAccount.id) ? (
+              <Text className="-mt-1 text-xs font-bold text-text-error">
+                {props.nosync ? "DEBUG · sync off" : "DEBUG · sync ON (server)"}
+              </Text>
+            ) : null}
             {currentAccount.name ? (
               <Text className="-mt-1 text-xs text-text-secondary">{`id: ${currentAccount.id}`}</Text>
             ) : null}
@@ -173,6 +184,15 @@ export function ScreenAccount(props: IProps): JSX.Element {
           >
             Sign Out
           </Button>
+          <View className="mt-3">
+            <LinkButton
+              name="account-change-password"
+              className="text-sm"
+              onPress={() => navigateToModal("changePasswordModal")}
+            >
+              Change password
+            </LinkButton>
+          </View>
         </View>
       ) : (
         <View>
@@ -197,6 +217,7 @@ export function ScreenAccount(props: IProps): JSX.Element {
             </View>
             <Text className="flex-1 ml-2 text-base text-center text-text-alwayswhite">Sign in with Apple</Text>
           </Pressable>
+          <EmailAuthButton onPress={() => navigateToModal("emailAuthModal")} />
         </View>
       )}
       <GroupHeader name="🌟 Liftosaur Premium" topPadding={true} />

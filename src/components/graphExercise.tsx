@@ -1,11 +1,19 @@
 import { JSX, memo, useMemo, useState } from "react";
+import { usePerfWhyRender } from "../utils/usePerfWhyRender";
 import { View, Pressable } from "react-native";
 import { Text } from "./primitives/text";
 import { Select } from "./primitives/select";
 import { CollectionUtils_sort, CollectionUtils_inGroupsOf } from "../utils/collection";
 import { DateUtils_format } from "../utils/date";
-import { equipmentName, Exercise_eq, Exercise_get } from "../models/exercise";
-import { Weight_convertTo, Weight_build, Weight_getOneRepMax, Weight_isOrPct, Weight_display } from "../models/weight";
+import { equipmentName, Exercise_eq, Exercise_get, Exercise_getVolumeMultiplier } from "../models/exercise";
+import {
+  Weight_convertTo,
+  Weight_build,
+  Weight_getOneRepMax,
+  Weight_isOrPct,
+  Weight_display,
+  Weight_multiply,
+} from "../models/weight";
 import { IHistoryRecord, IExerciseType, ISettings, IExerciseSelectedType } from "../types";
 import { IDispatch } from "../ducks/types";
 import { Reps_volume } from "../models/set";
@@ -61,7 +69,10 @@ function getData(
     if (entry != null) {
       const maxSet = History_getMaxWeightSetFromEntry(entry);
       const maxe1RMSet = History_getMax1RMSetFromEntry(entry);
-      const volume = Reps_volume(entry.sets, settings.units);
+      const volume = Weight_multiply(
+        Reps_volume(entry.sets, settings.units),
+        Exercise_getVolumeMultiplier(entry.exercise, settings)
+      );
       if (maxSet != null) {
         const convertedWeight = Weight_convertTo(
           maxSet.completedWeight ?? maxSet.weight ?? Weight_build(0, settings.units),
@@ -126,6 +137,7 @@ function getData(
 }
 
 function GraphExerciseInner(props: IGraphProps): JSX.Element {
+  usePerfWhyRender("graph", props as unknown as Record<string, unknown>);
   const [selectedType, setSelectedType] = useState<IExerciseSelectedType>(props.initialType || "weight");
   const eqName = equipmentName(props.exercise.equipment);
   const units = props.settings.units;

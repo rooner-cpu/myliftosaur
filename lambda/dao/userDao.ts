@@ -11,6 +11,7 @@ import {
   IStatsLengthValue,
   IStatsWeightValue,
   IStatsPercentageValue,
+  IStatsHealthValue,
 } from "../../src/types";
 import { Settings_build } from "../../src/models/settings";
 import {
@@ -38,7 +39,7 @@ import { LftS3Buckets } from "./buckets";
 import JWT from "jsonwebtoken";
 import { DateUtils_formatYYYYMMDDHHMM } from "../../src/utils/date";
 import * as path from "path";
-import { ICollectionVersions, VersionTracker } from "../../src/models/versionTracker";
+import { ICollectionVersions, isCollectionVersions, VersionTracker } from "../../src/models/versionTracker";
 import { DebugDao } from "./debugDao";
 import { EventDao } from "./eventDao";
 
@@ -86,6 +87,8 @@ export type IUserDao = {
   createdAt: number;
   googleId?: string;
   appleId?: string;
+  passwordHash?: string;
+  emailVerifiedAt?: number;
   storage: IStorage;
   nickname?: string;
 };
@@ -102,9 +105,32 @@ export type ILimitedUserDao = Omit<IUserDao, "storage"> & {
 
 interface IStatDb {
   name: string;
-  value: IWeight | ILength | IPercentage;
+  // Plain number for "health" rows (sleep minutes / kcal / grams), unit-tagged object for the rest.
+  value: IWeight | ILength | IPercentage | number;
   timestamp: number;
-  type: "length" | "weight" | "percentage";
+  type: "length" | "weight" | "percentage" | "health";
+  updatedAt?: number;
+  hidden?: boolean;
+  appleUuid?: string;
+  googleUuid?: string;
+}
+
+// Maps an outdated client storage version to the server version it's safe to sync against anyway.
+// Only include gaps composed entirely of idempotent, data-only migrations that don't change the storage
+// shape (the server re-runs all migrations on every sync, so old-format fields get relocated/re-derived
+// server-side). See rn-ota-delivery.md: releases that bump runtimeVersion strand users who haven't
+// installed the new native binary, and OTA can't reach them.
+// Both gaps below end at 20260702120000 = sanitize_pipe_bang_in_custom_exercise_names (data-only). The
+// intermediate 20260628120000 step is move_amrap_modal_to_progress (also data-only), so the older
+// versionCode-140 client (20260304084247) stays whitelisted across both migrations rather than being
+// re-stranded when the server advances past 20260628120000.
+const syncSafeOutdatedClientVersions: Record<string, string> = {
+  "20260304084247": "20260702120000",
+  "20260628120000": "20260702120000",
+};
+
+function isSyncSafeOutdatedClient(clientVersion: string, serverVersion: string): boolean {
+  return syncSafeOutdatedClientVersions[clientVersion] === serverVersion;
 }
 
 export class UserDao {
@@ -223,13 +249,22 @@ export class UserDao {
     }
     const { _versions, ...limitedUserStorage } = result.data;
     if (limitedUserStorage.version !== storageUpdate.version) {
-      this.di.log.log(
-        "outdated storage, client version:",
-        storageUpdate.version,
-        "server version:",
-        limitedUserStorage.version
-      );
-      return { success: false, error: "outdated_client_storage" };
+      if (isSyncSafeOutdatedClient(storageUpdate.version, limitedUserStorage.version)) {
+        this.di.log.log(
+          "sync-safe outdated storage, allowing merge, client version:",
+          storageUpdate.version,
+          "server version:",
+          limitedUserStorage.version
+        );
+      } else {
+        this.di.log.log(
+          "outdated storage, client version:",
+          storageUpdate.version,
+          "server version:",
+          limitedUserStorage.version
+        );
+        return { success: false, error: "outdated_client_storage" };
+      }
     }
     if (
       Object.keys(storageUpdate.storage || {}).length === 0 &&
@@ -320,6 +355,13 @@ export class UserDao {
         }
       }
     }
+    for (const type of ObjectUtils_keys(stats.health || {})) {
+      for (const stat of stats.health?.[type] || []) {
+        if (deletedVersionsStats.indexOf(stat.timestamp) === -1) {
+          statsDb.push({ ...stat, type: "health", name: `${stat.timestamp}_${type}` });
+        }
+      }
+    }
     const statsDeletes =
       deletedVersionsStats.length > 0
         ? (async () => {
@@ -382,7 +424,16 @@ export class UserDao {
     }
     const limitedUserStorage = result.data;
     if (limitedUserStorage.version !== storageUpdate.version) {
-      return { success: false, error: "outdated_client_storage" };
+      if (isSyncSafeOutdatedClient(storageUpdate.version, limitedUserStorage.version)) {
+        this.di.log.log(
+          "sync-safe outdated storage (sync1), allowing merge, client version:",
+          storageUpdate.version,
+          "server version:",
+          limitedUserStorage.version
+        );
+      } else {
+        return { success: false, error: "outdated_client_storage" };
+      }
     }
     const { originalId: oldOriginalId, version, settings, tempUserId, ...restStorageUpdate } = storageUpdate;
     if (Object.keys(restStorageUpdate).length === 0 && ObjectUtils_keys(settings).length === 0) {
@@ -506,12 +557,53 @@ export class UserDao {
     }
   }
 
-  public static build(id: string, email: string, opts: { appleId?: string; googleId?: string }): IUserDao {
+  public async getAllByEmail(email: string): Promise<ILimitedUserDao[]> {
+    const env = Utils_getEnv();
+    return (
+      (await this.di.dynamo.query<ILimitedUserDao>({
+        tableName: userTableNames[env].users,
+        indexName: userTableNames[env].usersEmail,
+        expression: "#email = :email",
+        attrs: { "#email": "email" },
+        values: { ":email": email },
+      })) || []
+    );
+  }
+
+  // History record ids are timestamp-based, so the max non-deleted key in
+  // _versions.history.items is the latest workout date without querying the
+  // history table. The vector-clock `t` values are modification times bumped
+  // by edits/sync churn, so the keys are the more truthful activity signal.
+  public static lastWorkoutTs(user: ILimitedUserDao): number {
+    const history = user.storage._versions?.history;
+    if (history == null || !isCollectionVersions(history) || history.items == null) {
+      return 0;
+    }
+    const deleted = history.deleted || {};
+    let max = 0;
+    for (const key of Object.keys(history.items)) {
+      if (deleted[key] == null) {
+        const ts = parseInt(key, 10);
+        if (Number.isFinite(ts) && ts > max) {
+          max = ts;
+        }
+      }
+    }
+    return max;
+  }
+
+  public static build(
+    id: string,
+    email: string,
+    opts: { appleId?: string; googleId?: string; passwordHash?: string; emailVerifiedAt?: number }
+  ): IUserDao {
     return {
       id,
       email,
       googleId: opts.googleId,
       appleId: opts.appleId,
+      passwordHash: opts.passwordHash,
+      emailVerifiedAt: opts.emailVerifiedAt,
       createdAt: Date.now(),
       storage: {
         progress: [],
@@ -575,15 +667,21 @@ export class UserDao {
   public async saveStat(
     userId: string,
     statKey: string,
-    type: "weight" | "length" | "percentage",
-    stat: IStatsWeightValue | IStatsLengthValue | IStatsPercentageValue
+    type: "weight" | "length" | "percentage" | "health",
+    stat: IStatsWeightValue | IStatsLengthValue | IStatsPercentageValue | IStatsHealthValue
   ): Promise<void> {
     const env = Utils_getEnv();
+    // `put` replaces the whole item, so the optional fields must be carried over — dropping them here
+    // would clobber e.g. a health row's `hidden` flag or source uuid on every single-value write.
     const statDb: IStatDb = {
       name: `${stat.timestamp}_${statKey}`,
       value: stat.value,
       timestamp: stat.timestamp,
       type,
+      ...(stat.updatedAt != null ? { updatedAt: stat.updatedAt } : {}),
+      ...("hidden" in stat && stat.hidden ? { hidden: true } : {}),
+      ...(stat.appleUuid != null ? { appleUuid: stat.appleUuid } : {}),
+      ...(stat.googleUuid != null ? { googleUuid: stat.googleUuid } : {}),
     };
     await this.di.dynamo.put({
       tableName: userTableNames[env].stats,
@@ -607,6 +705,19 @@ export class UserDao {
     delete storage.stats;
     const item = { ...user, storage, nickname: storage.settings.nickname?.toLowerCase() };
     await this.di.dynamo.put({ tableName: userTableNames[env].users, item });
+  }
+
+  // New-account writes must be conditional: signup/signin endpoints accept a
+  // client-suggested id (anonymous-account continuity), and an unconditional
+  // put would let anyone overwrite an existing user row and take over that id
+  public async create(user: ILimitedUserDao): Promise<boolean> {
+    const env = Utils_getEnv();
+    const storage = ObjectUtils_clone(user.storage);
+    delete storage.programs;
+    delete storage.history;
+    delete storage.stats;
+    const item = { ...user, storage, nickname: storage.settings.nickname?.toLowerCase() };
+    return this.di.dynamo.putIfNotExists({ tableName: userTableNames[env].users, item, partitionKey: "id" });
   }
 
   public async applyStorageUpdate(
@@ -735,7 +846,7 @@ export class UserDao {
   public async getStatsPage(
     userId: string,
     args: { statKey: string; beforeTimestamp?: number; limit: number }
-  ): Promise<(IStatsWeightValue | IStatsLengthValue | IStatsPercentageValue)[]> {
+  ): Promise<(IStatsWeightValue | IStatsLengthValue | IStatsPercentageValue | IStatsHealthValue)[]> {
     const env = Utils_getEnv();
     const hasCursor = args.beforeTimestamp != null;
     const statsDb = await this.di.dynamo.query<IStatDb & { userId?: string }>({
@@ -756,8 +867,9 @@ export class UserDao {
       vtype: "stat" as const,
       value: s.value,
       timestamp: s.timestamp,
-      updatedAt: s.timestamp,
-    })) as (IStatsWeightValue | IStatsLengthValue | IStatsPercentageValue)[];
+      updatedAt: s.updatedAt ?? s.timestamp,
+      ...(s.hidden ? { hidden: true } : {}),
+    })) as (IStatsWeightValue | IStatsLengthValue | IStatsPercentageValue | IStatsHealthValue)[];
   }
 
   public async getLastBodyweightStats(userId: string): Promise<IStats> {
@@ -848,6 +960,10 @@ export class UserDao {
       } else {
         fromUser.googleId = token;
         delete fromUser.appleId;
+      }
+      if (toUser.passwordHash != null) {
+        fromUser.passwordHash = toUser.passwordHash;
+        fromUser.emailVerifiedAt = toUser.emailVerifiedAt;
       }
       fromUser.email = toUser.email;
       fromUser.storage.email = toUser.email;
@@ -1030,7 +1146,7 @@ export class UserDao {
   public async saveStorage(user: ILimitedUserDao, aStorage: IPartialStorage): Promise<void> {
     const storage = Storage_fillVersions(aStorage);
     const { history, programs, stats, ...userStorage } = storage;
-    const statsObj = stats || { length: {}, weight: {}, percentage: {} };
+    const statsObj: IStats = stats || { length: {}, weight: {}, percentage: {} };
     const env = Utils_getEnv();
     const updatedUser: ILimitedUserDao = { ...user, storage: userStorage };
 
@@ -1098,6 +1214,12 @@ export class UserDao {
           newStatNames.add(`${v.timestamp}_${k}`);
         }
       }
+      for (const k of ObjectUtils_keys(statsObj.health || {})) {
+        const s = statsObj.health?.[k];
+        for (const v of s || []) {
+          newStatNames.add(`${v.timestamp}_${k}`);
+        }
+      }
       const statsToDelete = [];
       for (const k of ObjectUtils_keys(userStats.weight)) {
         const s = userStats.weight[k];
@@ -1126,6 +1248,19 @@ export class UserDao {
           }
         }
       }
+      // A stats blob without a `health` key (e.g. from a pre-health client or an old backup) must not
+      // delete imported health rows — absence means "unknown", not "deleted".
+      if (statsObj.health != null) {
+        for (const k of ObjectUtils_keys(userStats.health || {})) {
+          const s = userStats.health?.[k];
+          for (const v of s || []) {
+            const name = `${v.timestamp}_${k}`;
+            if (!newStatNames.has(name)) {
+              statsToDelete.push(name);
+            }
+          }
+        }
+      }
       statsDeletes = CollectionUtils_inGroupsOf(23, statsToDelete).map(async (group) => {
         await this.di.dynamo.batchDelete({
           tableName: userTableNames[env].stats,
@@ -1145,7 +1280,14 @@ export class UserDao {
         const st = statsObj.percentage[key] || [];
         return st.map((s) => ({ ...s, name: `${s.timestamp}_${key}`, type: "percentage" }));
       });
-      const statsArray = statsLengthArray.concat(statsWeightArray).concat(statsPercentageArray);
+      const statsHealthArray: IStatDb[] = ObjectUtils_keys(statsObj.health || {}).flatMap((key) => {
+        const st = statsObj.health?.[key] || [];
+        return st.map((s) => ({ ...s, name: `${s.timestamp}_${key}`, type: "health" as const }));
+      });
+      const statsArray = statsLengthArray
+        .concat(statsWeightArray)
+        .concat(statsPercentageArray)
+        .concat(statsHealthArray);
       statsUpdates = CollectionUtils_inGroupsOf(23, statsArray).map(async (group) => {
         await this.di.dynamo.batchPut({
           tableName: userTableNames[env].stats,
@@ -1206,21 +1348,29 @@ function convertStatsFromDb(statsDb: IStatDb[]): IStats {
     weight: Partial<Record<string, unknown[]>>;
     length: Partial<Record<string, unknown[]>>;
     percentage: Partial<Record<string, unknown[]>>;
+    health: Partial<Record<string, unknown[]>>;
   }>(
     (memo, statDb) => {
       const type = statDb.type;
       const name = statDb.name.split("_")[1];
       memo[type][name] = memo[type][name] || [];
-      const stat: IStatsLengthValue | IStatsWeightValue | IStatsPercentageValue = {
+      // The sync write paths spread the whole client value into the row, so reconstruction must hand the
+      // extra fields back: `hidden` is the user's only removal mechanism for imported health records, and
+      // the uuids feed the health importer's no-churn upsert check after a restore. `updatedAt` falls back
+      // to `timestamp` for rows written before it was preserved (or by the API's saveStat).
+      const stat: IStatsLengthValue | IStatsWeightValue | IStatsPercentageValue | IStatsHealthValue = {
         timestamp: statDb.timestamp,
-        updatedAt: statDb.timestamp,
+        updatedAt: statDb.updatedAt ?? statDb.timestamp,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         value: statDb.value as any,
         vtype: "stat",
+        ...(statDb.hidden ? { hidden: true } : {}),
+        ...(statDb.appleUuid != null ? { appleUuid: statDb.appleUuid } : {}),
+        ...(statDb.googleUuid != null ? { googleUuid: statDb.googleUuid } : {}),
       };
       memo[type][name]!.push(stat);
       return memo;
     },
-    { weight: {}, length: {}, percentage: {} }
+    { weight: {}, length: {}, percentage: {}, health: {} }
   );
 }

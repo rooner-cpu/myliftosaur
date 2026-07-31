@@ -10,8 +10,9 @@ import { IconSpinner } from "./icons/iconSpinner";
 import { IconClose } from "./icons/iconClose";
 import { lb } from "lens-shmens";
 import { ObjectUtils_filter, ObjectUtils_values } from "../utils/object";
-import { navigateToModal } from "../navigation/navigationService";
+import { navigateToModal, getCurrentScreenData } from "../navigation/navigationService";
 import { Tailwind_semantic, Tailwind_colors } from "../utils/tailwindConfig";
+import { useTrackClick } from "../utils/clickTracking";
 import { ITourId } from "../models/state";
 import type { IHelpKey } from "./help/helpRegistry";
 
@@ -33,6 +34,7 @@ interface INavbarProps extends INavbarCenterProps {
 }
 
 export const NavbarView = (props: INavbarProps): JSX.Element => {
+  const trackClick = useTrackClick();
   const [showDebug, setShowDebug] = useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const { loading } = props.navCommon;
@@ -100,10 +102,15 @@ export const NavbarView = (props: INavbarProps): JSX.Element => {
             <Pressable
               className="p-2"
               onPress={() => {
+                trackClick(props.helpTourId ? `navbar-tour-${props.helpTourId}` : `navbar-help-${props.helpKey}`);
                 if (props.helpTourId) {
                   updateState(
                     props.dispatch,
-                    [lb<IState>().p("tour").record({ id: props.helpTourId, enforced: true })],
+                    [
+                      lb<IState>()
+                        .p("tour")
+                        .record({ id: props.helpTourId, enforced: true, screenData: getCurrentScreenData() }),
+                    ],
                     "Start tour from navbar"
                   );
                 } else if (props.helpKey) {

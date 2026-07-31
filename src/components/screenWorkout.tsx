@@ -1,5 +1,6 @@
 import { JSX, memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { Pressable, Platform, InteractionManager } from "react-native";
+import { useTrackClick } from "../utils/clickTracking";
 import { IHistoryRecord, IProgram, ISettings, IStats, ISubscription } from "../types";
 import { IDispatch } from "../ducks/types";
 import { Program_evaluate, Program_getProgramDay } from "../models/program";
@@ -21,7 +22,7 @@ import { Thunk_updateLiveActivity, Thunk_deleteProgress } from "../ducks/thunks"
 import { Reps_findNextSetIndex } from "../models/set";
 import { Subscriptions_hasSubscription } from "../utils/subscriptions";
 import { workoutTourConfig } from "./tour/workoutTourConfig";
-import { navigateToModal } from "../navigation/navigationService";
+import { navigateToModal, getCurrentRouteName } from "../navigation/navigationService";
 import { Dialog_confirm } from "../utils/dialog";
 import { usePerfRenderCount } from "../utils/usePerfRenderCount";
 
@@ -74,7 +75,7 @@ function ScreenWorkoutInner(props: IScreenWorkoutProps): JSX.Element | null {
     }
   }, []);
 
-  const amrapModal = progress.ui?.amrapModal;
+  const amrapModal = progress.amrapModal;
   const prevAmrapNonce = useRef<number | undefined>(undefined);
   useEffect(() => {
     if (amrapModal && amrapModal.nonce !== prevAmrapNonce.current) {
@@ -84,23 +85,29 @@ function ScreenWorkoutInner(props: IScreenWorkoutProps): JSX.Element | null {
   }, [amrapModal]);
 
   const exercisePickerState = progress.ui?.exercisePicker?.state;
-  const prevExercisePickerState = useRef<typeof exercisePickerState>(undefined);
+  // Track the last state we navigated for by identity (not a truthy edge), which self-heals reopening even if a stale
+  // flag lingers (e.g. an app kill left it persisted, or a deferred open below was cancelled) where a `!last` edge
+  // would deadlock. The picker writes live UI (search/filters/selection) back into `state`, so its identity also
+  // changes on every keystroke — gate the actual navigation on the current route so those mutations don't re-push the
+  // modal while it's already open (same approach as the editProgram picker).
+  const navigatedExercisePickerState = useRef<typeof exercisePickerState>(undefined);
   useEffect(() => {
-    if (exercisePickerState && !prevExercisePickerState.current) {
-      const progressId = progress.id;
-      if (Platform.OS === "web") {
-        navigateToModal("exercisePickerModal", { progressId });
-        prevExercisePickerState.current = exercisePickerState;
-        return undefined;
-      }
-      const handle = InteractionManager.runAfterInteractions(() => {
-        navigateToModal("exercisePickerModal", { progressId });
-      });
-      prevExercisePickerState.current = exercisePickerState;
-      return () => handle.cancel();
+    const changed = navigatedExercisePickerState.current !== exercisePickerState;
+    navigatedExercisePickerState.current = exercisePickerState;
+    if (!exercisePickerState || !changed || getCurrentRouteName() === "exercisePickerModal") {
+      return undefined;
     }
-    prevExercisePickerState.current = exercisePickerState;
-    return undefined;
+    const progressId = progress.id;
+    if (Platform.OS === "web") {
+      navigateToModal("exercisePickerModal", { progressId });
+      return undefined;
+    }
+    const handle = InteractionManager.runAfterInteractions(() => {
+      if (getCurrentRouteName() !== "exercisePickerModal") {
+        navigateToModal("exercisePickerModal", { progressId });
+      }
+    });
+    return () => handle.cancel();
   }, [exercisePickerState, progress.id]);
 
   const editSetModal = progress.ui?.editSetModal;
@@ -112,7 +119,35 @@ function ScreenWorkoutInner(props: IScreenWorkoutProps): JSX.Element | null {
     prevEditSetModal.current = editSetModal;
   }, [editSetModal]);
 
+  const setTimerModal = progress.setTimer;
+  const prevSetTimerNonce = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (setTimerModal && setTimerModal.nonce !== prevSetTimerNonce.current) {
+      prevSetTimerNonce.current = setTimerModal.nonce;
+      navigateToModal("setTimerModal", { context: "workout", progressId: progress.id });
+    }
+  }, [setTimerModal, progress.id]);
+
+  const setTimerEditModal = progress.ui?.setTimerEditModal;
+  const prevSetTimerEditModal = useRef<typeof setTimerEditModal>(undefined);
+  useEffect(() => {
+    if (setTimerEditModal && !prevSetTimerEditModal.current) {
+      navigateToModal("setTimerEditModal", { context: "workout", progressId: progress.id });
+    }
+    prevSetTimerEditModal.current = setTimerEditModal;
+  }, [setTimerEditModal, progress.id]);
+
+  const roundingModal = progress.ui?.roundingModal;
+  const prevRoundingModal = useRef<typeof roundingModal>(undefined);
+  useEffect(() => {
+    if (roundingModal && !prevRoundingModal.current) {
+      navigateToModal("roundingInfoModal", { context: "workout", progressId: progress.id });
+    }
+    prevRoundingModal.current = roundingModal;
+  }, [roundingModal, progress.id]);
+
   const dispatch = props.dispatch;
+  const trackClick = useTrackClick();
   const isCurrent = Progress_isCurrent(progress);
   const onDeletePress = useCallback(async (): Promise<void> => {
     const confirmed = await Dialog_confirm(
@@ -124,10 +159,12 @@ function ScreenWorkoutInner(props: IScreenWorkoutProps): JSX.Element | null {
   }, [dispatch, isCurrent, progress.id]);
 
   const onDeletePressHandler = useCallback(() => {
+    trackClick("workout-delete");
     onDeletePress().catch(() => undefined);
-  }, [onDeletePress]);
+  }, [onDeletePress, trackClick]);
 
   const onTitleClick = useCallback(() => {
+    trackClick("workout-change-date");
     dispatch({
       type: "ChangeDate",
       id: progress.id,
@@ -135,19 +172,20 @@ function ScreenWorkoutInner(props: IScreenWorkoutProps): JSX.Element | null {
       time: History_workoutTime(progress),
     });
     navigateToModal("dateModal", { progressId: progress.id });
-  }, [dispatch, progress]);
+  }, [dispatch, progress, trackClick]);
 
   const onPauseResume = useCallback(() => {
+    trackClick(History_isPaused(props.progress.intervals) ? "workout-resume" : "workout-pause");
     if (History_isPaused(props.progress.intervals)) {
       History_resumeWorkoutAction(dispatch, false, props.settings, Subscriptions_hasSubscription(props.subscription));
-      const currentEntryIndex = props.progress.ui?.currentEntryIndex || 0;
+      const currentEntryIndex = props.progress.currentEntryIndex || 0;
       const currentEntry = props.progress.entries[currentEntryIndex];
       const setIndex = currentEntry ? Reps_findNextSetIndex(currentEntry) : 0;
       dispatch(Thunk_updateLiveActivity(currentEntryIndex, setIndex, props.progress.timer, props.progress.timerSince));
     } else {
       History_pauseWorkoutAction(dispatch);
     }
-  }, [dispatch, props.progress, props.settings, props.subscription]);
+  }, [dispatch, props.progress, props.settings, props.subscription, trackClick]);
 
   const navSubtitle = useMemo(() => {
     return !isCurrent && progress.endTime ? (

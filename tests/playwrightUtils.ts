@@ -76,6 +76,21 @@ export async function PlaywrightUtils_select(page: Page, locator: Locator, name:
     .click();
 }
 
+// The barrel under `menu-item-<name>` is opened by tapping `menu-item-name-<name>`, but that tap
+// is a toggle, and the expanded state can survive navigating away and back (screens stay mounted).
+// Blindly tapping the label would then close the barrel and the item would never become visible.
+export async function PlaywrightUtils_selectFromBarrel(page: Page, name: string, value: string): Promise<void> {
+  const item = page.getByTestId(`menu-item-${name}`).getByTestId(`scroll-barrel-item-${value}`);
+  await expect(async () => {
+    if (!(await item.isVisible())) {
+      await page.getByTestId(`menu-item-name-${name}`).click();
+    }
+    await expect(item).toBeVisible({ timeout: 1000 });
+  }).toPass();
+  await item.scrollIntoViewIfNeeded();
+  await item.click();
+}
+
 export async function PlaywrightUtils_swipeLeft(page: Page, locator: Locator): Promise<void> {
   await locator.scrollIntoViewIfNeeded();
   const box = await locator.boundingBox();
@@ -124,8 +139,16 @@ export async function PlaywrightUtils_type(value: string, locator: () => Locator
   await locator().blur();
 }
 
-export function PlaywrightUtils_disableSubscriptions(page: Page): Promise<void> {
-  return page.evaluate(() => {
+// window.state is only assigned on the first reducer dispatch, which can happen
+// well after the page "load" event when tests run in parallel — wait for it
+// before evaluating anything that touches it.
+async function PlaywrightUtils_waitForState(page: Page): Promise<void> {
+  await page.waitForFunction(() => (window as any).state?.storage != null);
+}
+
+export async function PlaywrightUtils_disableSubscriptions(page: Page): Promise<void> {
+  await PlaywrightUtils_waitForState(page);
+  await page.evaluate(() => {
     (window as any).state.storage.subscription.key = "test";
   }, []);
 }
@@ -153,12 +176,22 @@ export async function PlaywrightUtils_createProgram(page: Page, name: string): P
   await page.getByTestId("modal-create-program-submit").click();
 }
 
+export async function PlaywrightUtils_createProgramWithCode(page: Page, name: string, code: string): Promise<void> {
+  await PlaywrightUtils_createProgram(page, name);
+  await page.getByTestId("tab-edit").click();
+  await page.getByTestId("editor-v2-full-program").click();
+  await PlaywrightUtils_clearCodeMirror(page, "planner-editor");
+  await PlaywrightUtils_typeCodeMirror(page, "planner-editor", code);
+  await page.getByTestId("save-program").click();
+}
+
 export async function PlaywrightUtils_closeTour(page: Page): Promise<void> {
   await page.getByTestId("tour-close").click();
 }
 
-export function PlaywrightUtils_disableTours(page: Page): Promise<void> {
-  return page.evaluate(() => {
+export async function PlaywrightUtils_disableTours(page: Page): Promise<void> {
+  await PlaywrightUtils_waitForState(page);
+  await page.evaluate(() => {
     const tourHelps = [
       "workout.howItWorks",
       "workout.completingSets",
@@ -184,5 +217,9 @@ export function PlaywrightUtils_disableTours(page: Page): Promise<void> {
       "editProgramExercise.reuse",
     ];
     (window as any).state.storage.helps.push(...tourHelps);
+    // skipintro bypasses the onboarding survey, so on any reload with a program present the
+    // "How did you hear about us?" backfill sheet would open and block clicks — mark it done.
+    // hearAboutUs.spec.ts clears this to exercise the real survey flow.
+    (window as any).state.storage.hearAboutUs = { requests: [], done: true };
   });
 }

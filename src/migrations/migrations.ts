@@ -2,7 +2,7 @@ import { CollectionUtils_sort } from "../utils/collection";
 import { Dialog_alert } from "../utils/dialog";
 import { UidFactory_generateUid } from "../utils/generator";
 import { ObjectUtils_clone, ObjectUtils_keys, ObjectUtils_values } from "../utils/object";
-import { IGraph, IMuscle, ISettings, IStorage } from "../types";
+import { IGraph, IHistoryRecord, IMuscle, ISettings, IStorage } from "../types";
 import { Weight_build } from "../models/weight";
 import { PlannerExerciseEvaluator } from "../pages/planner/plannerExerciseEvaluator";
 import { basicBeginnerProgram } from "../programs/basicBeginnerProgram";
@@ -381,6 +381,62 @@ export const migrations = {
       for (const entry of record.entries) {
         if (!entry.id) {
           entry.id = Progress_getEntryId(entry.exercise);
+        }
+      }
+    }
+    return storage;
+  },
+  "20260628120000_move_amrap_modal_to_progress": (aStorage: IStorage): IStorage => {
+    const storage: IStorage = JSON.parse(JSON.stringify(aStorage));
+    // amrapModal and currentEntryIndex moved from progress.ui to progress so they version-sync across devices
+    // like setTimer. Carry over the values from a workout left open across the upgrade.
+    for (const record of storage.progress || []) {
+      const legacyUi = record.ui as
+        | undefined
+        | { amrapModal?: IHistoryRecord["amrapModal"]; currentEntryIndex?: number };
+      if (legacyUi?.amrapModal != null) {
+        if (record.amrapModal == null) {
+          record.amrapModal = legacyUi.amrapModal;
+        }
+        delete legacyUi.amrapModal;
+      }
+      if (legacyUi?.currentEntryIndex != null) {
+        if (record.currentEntryIndex == null) {
+          record.currentEntryIndex = legacyUi.currentEntryIndex;
+        }
+        delete legacyUi.currentEntryIndex;
+      }
+    }
+    return storage;
+  },
+  "20260702120000_sanitize_pipe_bang_in_custom_exercise_names": (aStorage: IStorage): IStorage => {
+    const storage: IStorage = JSON.parse(JSON.stringify(aStorage));
+    // `|` now separates exercise variations and `!` marks the current one in Liftoscript, so custom
+    // exercise names can no longer contain them. Occurrence is near-zero (no built-in uses them).
+    const renames: { from: string; to: string }[] = [];
+    for (const customExerciseKey of ObjectUtils_keys(storage.settings.exercises)) {
+      const customExercise = storage.settings.exercises[customExerciseKey];
+      if (customExercise?.name != null && /[|!]/.test(customExercise.name)) {
+        const from = customExercise.name;
+        const to = from.replace(/[|!]/g, "-").replace(/\s+/g, " ").trim();
+        customExercise.name = to;
+        if (to !== from) {
+          renames.push({ from, to });
+        }
+      }
+    }
+    // Programs reference custom exercises by name in their planner text, so the same names must be
+    // rewritten there - otherwise the parser reads the old `|`/`!` as variation syntax and misparses.
+    if (renames.length > 0) {
+      renames.sort((a, b) => b.from.length - a.from.length);
+      const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      for (const program of storage.programs || []) {
+        for (const week of program.planner?.weeks || []) {
+          for (const day of week.days || []) {
+            for (const rename of renames) {
+              day.exerciseText = day.exerciseText.replace(new RegExp(escapeRegExp(rename.from), "gi"), rename.to);
+            }
+          }
         }
       }
     }

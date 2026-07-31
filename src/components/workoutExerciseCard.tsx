@@ -47,10 +47,12 @@ import {
 } from "../models/equipment";
 import { PlannerProgramExercise_currentDescription } from "../pages/planner/models/plannerProgramExercise";
 import { IByExercise } from "../pages/planner/plannerEvaluator";
+import { useTrackClick } from "../utils/clickTracking";
 import { IconReorder } from "./icons/iconReorder";
 import { navigateToModal } from "../navigation/navigationService";
 import { Dialog_confirm } from "../utils/dialog";
 import { usePerfRenderCount } from "../utils/usePerfRenderCount";
+import { usePerfWhyRender } from "../utils/usePerfWhyRender";
 
 interface IWorkoutExerciseCardProps {
   entry: IHistoryEntry;
@@ -77,6 +79,8 @@ type IKebabAction = "edit" | "swap" | "superset" | "remove";
 
 function WorkoutExerciseCardInner(props: IWorkoutExerciseCardProps): JSX.Element {
   usePerfRenderCount("WorkoutExerciseCard");
+  usePerfWhyRender("sets-grid", props as unknown as Record<string, unknown>);
+  const trackClick = useTrackClick();
   const programExerciseId = props.entry.programExerciseId;
   const programExercise = useMemo(
     () =>
@@ -195,7 +199,6 @@ function WorkoutExerciseCardInner(props: IWorkoutExerciseCardProps): JSX.Element
             return newEntries;
           }),
         lb<IHistoryRecord>()
-          .pi("ui", {})
           .p("currentEntryIndex")
           .recordModify((index) => Math.max(0, (index ?? 0) - 1)),
       ],
@@ -212,6 +215,7 @@ function WorkoutExerciseCardInner(props: IWorkoutExerciseCardProps): JSX.Element
 
   const runKebabAction = useCallback(
     (action: IKebabAction): void => {
+      trackClick(`workout-kebab-${action}`);
       setIsKebabMenuOpen(false);
       if (action === "edit") {
         editProgramExercise();
@@ -223,7 +227,7 @@ function WorkoutExerciseCardInner(props: IWorkoutExerciseCardProps): JSX.Element
         removeExercise().catch(() => undefined);
       }
     },
-    [editProgramExercise, swapExercise, editSuperset, removeExercise]
+    [editProgramExercise, swapExercise, editSuperset, removeExercise, trackClick]
   );
 
   const kebabActions = useMemo<Array<{ action: IKebabAction; label: string }>>(() => {
@@ -255,6 +259,7 @@ function WorkoutExerciseCardInner(props: IWorkoutExerciseCardProps): JSX.Element
 
   const subscription = props.subscription;
   const onTargetClick = useCallback((): void => {
+    trackClick("workout-target-type");
     updateSettings(
       dispatch,
       lb<ISettings>()
@@ -265,9 +270,10 @@ function WorkoutExerciseCardInner(props: IWorkoutExerciseCardProps): JSX.Element
         ),
       "Change target type"
     );
-  }, [dispatch, subscription, currentEquipmentName]);
+  }, [dispatch, subscription, currentEquipmentName, trackClick]);
 
   const onKebabPress = useCallback((): void => {
+    trackClick("workout-exercise-kebab");
     if (Platform.OS === "web") {
       setIsKebabMenuOpen(true);
       return;
@@ -285,11 +291,12 @@ function WorkoutExerciseCardInner(props: IWorkoutExerciseCardProps): JSX.Element
         }
       }
     );
-  }, [kebabActions, runKebabAction]);
+  }, [kebabActions, runKebabAction, trackClick]);
 
   const onPressExerciseStats = useCallback(() => {
+    trackClick("workout-exercise-stats");
     dispatch(Thunk_pushExerciseStatsScreen(entryExercise));
-  }, [dispatch, entryExercise]);
+  }, [dispatch, entryExercise, trackClick]);
 
   const onChangeNotes = useCallback(
     (text: string) => {
@@ -389,7 +396,7 @@ function WorkoutExerciseCardInner(props: IWorkoutExerciseCardProps): JSX.Element
             <Pressable
               data-testid="exercise-options"
               testID="exercise-options"
-              className="px-4 py-2"
+              className="p-4"
               style={{ marginRight: -12 }}
               onPress={onKebabPress}
               hitSlop={16}

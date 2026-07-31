@@ -147,6 +147,9 @@ describe("MCP", () => {
       expect(toolNames).to.include("get_history");
       expect(toolNames).to.include("run_playground");
       expect(toolNames).to.include("get_liftoscript_reference");
+      for (const tool of body.result.tools) {
+        expect(tool.outputSchema?.type).to.equal("object");
+      }
     });
 
     it("returns error for unknown method", async () => {
@@ -218,6 +221,50 @@ describe("MCP", () => {
       expect(body.result.isError).to.equal(true);
       expect(body.result.content[0].text).to.include("subscription required");
     });
+
+    // storage.subscription.key is server-derived and never persisted, so a valid free user's server-read storage
+    // has no key. Entitlement must still be granted from the lftFreeUsers row via OAuth.
+    it("grants access via a valid free-user key when storage.subscription.key is absent", async () => {
+      const token = await createOauthToken();
+      const user = await di.dynamo.get<any>({ tableName: userTableNames.prod.users, key: { id: userId } });
+      user.storage.subscription = { apple: [], google: [] };
+      await di.dynamo.put({ tableName: userTableNames.prod.users, item: user });
+
+      const result = await handler(buildMcpEvent(toolCall("list_programs"), authHeaders(token)), ctx);
+      expect(result.statusCode).to.equal(200);
+      const body = parseBody(result);
+      expect(body.result.isError).to.be.undefined;
+    });
+
+    it("grants access via a valid free-user key with an API key when storage.subscription.key is absent", async () => {
+      const apiKey = await createApiKey();
+      const user = await di.dynamo.get<any>({ tableName: userTableNames.prod.users, key: { id: userId } });
+      user.storage.subscription = { apple: [], google: [] };
+      await di.dynamo.put({ tableName: userTableNames.prod.users, item: user });
+
+      const result = await handler(buildMcpEvent(toolCall("list_programs"), authHeaders(apiKey)), ctx);
+      expect(result.statusCode).to.equal(200);
+      const body = parseBody(result);
+      expect(body.result.isError).to.be.undefined;
+    });
+
+    // An expired free-user row must NOT grant access, even though the row exists.
+    it("rejects when the free-user key is expired and storage has no receipts", async () => {
+      const token = await createOauthToken();
+      await di.dynamo.put({
+        tableName: freeUsersTableNames.prod.freeUsers,
+        item: { id: userId, key: "test-sub-key", isClaimed: true, expires: Date.now() - 1 },
+      });
+      const user = await di.dynamo.get<any>({ tableName: userTableNames.prod.users, key: { id: userId } });
+      user.storage.subscription = { apple: [], google: [] };
+      await di.dynamo.put({ tableName: userTableNames.prod.users, item: user });
+
+      const result = await handler(buildMcpEvent(toolCall("list_programs"), authHeaders(token)), ctx);
+      expect(result.statusCode).to.equal(200);
+      const body = parseBody(result);
+      expect(body.result.isError).to.equal(true);
+      expect(body.result.content[0].text).to.include("subscription required");
+    });
   });
 
   describe("unauthenticated tools", () => {
@@ -226,6 +273,14 @@ describe("MCP", () => {
       expect(result.statusCode).to.equal(200);
       const body = parseBody(result);
       expect(body.result.content[0].text).to.include("Liftoscript");
+      expect(body.result.structuredContent.text).to.include("Liftoscript");
+    });
+
+    it("returns program design guide", async () => {
+      const result = await handler(buildMcpEvent(toolCall("get_program_design_guide")), ctx);
+      expect(result.statusCode).to.equal(200);
+      const body = parseBody(result);
+      expect(body.result.content[0].text).to.include("Program Design Guide");
     });
 
     it("returns liftohistory reference", async () => {
@@ -290,6 +345,7 @@ describe("MCP", () => {
       const data = JSON.parse(body.result.content[0].text);
       expect(data.id).to.be.a("string");
       expect(data.stats).to.not.be.undefined;
+      expect(body.result.structuredContent.id).to.equal(data.id);
     });
 
     it("creates and gets a program", async () => {
@@ -466,6 +522,94 @@ describe("MCP", () => {
       expect(data.updatedProgramText).to.include("Squat");
     });
 
+    it("completes a set with no weight and progresses it (auto-answers the ask-weight modal)", async () => {
+      // A bodyweight set has no weight, so completing it opens the ask-weight modal in the app. The playground
+      // must auto-answer it, otherwise the set never finalizes and progression can't fire.
+      const programText = "# Week 1\n## Day 1\nPull Up / 3x5 / progress: lp(1lb)";
+      const commands = JSON.stringify([
+        "complete_set(1, 1)",
+        "complete_set(1, 2)",
+        "complete_set(1, 3)",
+        "finish_workout()",
+      ]);
+      const result = await handler(
+        buildMcpEvent(toolCall("run_playground", { programText, commands }), authHeaders(token)),
+        ctx
+      );
+      expect(result.statusCode).to.equal(200);
+      const data = JSON.parse(parseBody(result).result.content[0].text);
+      // The completed exercise shows up in the serialized workout (empty before the fix).
+      expect(data.workout).to.include("Pull Up");
+      // lp(1lb) fired, bumping the weight from empty to 1lb.
+      expect(data.updatedProgramText).to.include("Pull Up / 3x5 / 1lb");
+    });
+
+    it("completes an AMRAP set and progresses it (auto-answers the AMRAP modal)", async () => {
+      const programText = "# Week 1\n## Day 1\nSquat / 2x5 100lb, 1x5+ 100lb / progress: lp(5lb)";
+      const commands = JSON.stringify([
+        "complete_set(1, 1)",
+        "complete_set(1, 2)",
+        "complete_set(1, 3)",
+        "finish_workout()",
+      ]);
+      const result = await handler(
+        buildMcpEvent(toolCall("run_playground", { programText, commands }), authHeaders(token)),
+        ctx
+      );
+      expect(result.statusCode).to.equal(200);
+      const data = JSON.parse(parseBody(result).result.content[0].text);
+      expect(data.workout).to.include("Squat");
+      expect(data.updatedProgramText).to.include("105lb");
+    });
+
+    it("completes a timed (isometric hold) set and records the held time so progression fires", async () => {
+      // Completing a timed set opens the set-timer clock in the app and finishes on a second "Stop & Record"
+      // signal. The playground must fire that second signal itself, recording the programmed hold duration -
+      // otherwise the set stays uncompleted and the hold progression never runs.
+      // The progression graduates once the held time reaches the programmed target (completedSetTime >= setTime),
+      // which is the realistic hold pattern used by the Recommended Routine.
+      const programText =
+        "# Week 1\n## Day 1\nPlank / 3x1 0lb 20s|60s / progress: custom(hold: 0) {~\n  if (completedSetTime >= setTime) {\n    state.hold += 5\n  }\n~}";
+      const commands = JSON.stringify([
+        "complete_set(1, 1)",
+        "complete_set(1, 2)",
+        "complete_set(1, 3)",
+        "finish_workout()",
+      ]);
+      const result = await handler(
+        buildMcpEvent(toolCall("run_playground", { programText, commands }), authHeaders(token)),
+        ctx
+      );
+      expect(result.statusCode).to.equal(200);
+      const data = JSON.parse(parseBody(result).result.content[0].text);
+      expect(data.workout).to.include("Plank");
+      // Held the full 20s target, so completedSetTime >= setTime fired and bumped hold from 0 to 5.
+      expect(data.updatedProgramText).to.include("hold: 5");
+    });
+
+    it("change_set_time overrides only the recorded held time, not the target, so short holds fail progression", async () => {
+      const programText =
+        "# Week 1\n## Day 1\nPlank / 3x1 0lb 20s|60s / progress: custom(hold: 0) {~\n  if (completedSetTime >= setTime) {\n    state.hold += 5\n  }\n~}";
+      const commands = JSON.stringify([
+        "complete_set(1, 1)",
+        "complete_set(1, 2)",
+        "complete_set(1, 3)",
+        "change_set_time(1, 1, 10)",
+        "change_set_time(1, 2, 10)",
+        "change_set_time(1, 3, 10)",
+        "finish_workout()",
+      ]);
+      const result = await handler(
+        buildMcpEvent(toolCall("run_playground", { programText, commands }), authHeaders(token)),
+        ctx
+      );
+      expect(result.statusCode).to.equal(200);
+      const data = JSON.parse(parseBody(result).result.content[0].text);
+      // change_set_time lowered completedSetTime to 10 but left the 20s target intact, so
+      // completedSetTime (10) >= setTime (20) is false and the progression does not fire.
+      expect(data.updatedProgramText).to.include("hold: 0");
+    });
+
     it("returns error for invalid playground program", async () => {
       const result = await handler(
         buildMcpEvent(toolCall("run_playground", { programText: "invalid" }), authHeaders(token)),
@@ -475,6 +619,45 @@ describe("MCP", () => {
       const body = parseBody(result);
       expect(body.result.isError).to.equal(true);
       expect(body.result.content[0].text).to.include("Hint");
+    });
+
+    it("returns tool error when programText is missing (e.g. passed as 'program')", async () => {
+      const program = "# Week 1\n## Day 1\nSquat / 3x5 / 135lb / progress: lp(5lb)";
+      const result = await handler(buildMcpEvent(toolCall("run_playground", { program }), authHeaders(token)), ctx);
+      expect(result.statusCode).to.equal(200);
+      const body = parseBody(result);
+      expect(body.result.isError).to.equal(true);
+      expect(body.result.content[0].text).to.include("programText");
+    });
+
+    it("returns tool error instead of 500 for non-JSON commands", async () => {
+      const result = await handler(
+        buildMcpEvent(
+          toolCall("run_playground", {
+            programText: "Squat / 3x5 100lb / progress: lp(5lb)",
+            commands: "complete_all_sets(); finish_workout();",
+          }),
+          authHeaders(token)
+        ),
+        ctx
+      );
+      expect(result.statusCode).to.equal(200);
+      const body = parseBody(result);
+      expect(body.result.isError).to.equal(true);
+      expect(body.result.content[0].text).to.include("JSON array of command strings");
+    });
+
+    it("accepts commands as a native array", async () => {
+      const programText = "# Week 1\n## Day 1\nSquat / 3x5 / 135lb / progress: lp(5lb)";
+      const result = await handler(
+        buildMcpEvent(
+          toolCall("run_playground", { programText, commands: ["complete_set(1, 1)", "finish_workout()"] }),
+          authHeaders(token)
+        ),
+        ctx
+      );
+      expect(result.statusCode).to.equal(200);
+      expect(parseBody(result).result.isError).to.be.undefined;
     });
   });
 
@@ -539,7 +722,32 @@ describe("MCP", () => {
       expect(result.statusCode).to.equal(200);
       const body = parseBody(result);
       expect(body.result.isError).to.equal(true);
-      expect(body.result.content[0].text).to.include("name");
+      expect(body.result.content[0].text).to.include("Name cannot be empty");
+    });
+
+    it("rejects names with Liftoscript syntax characters", async () => {
+      const result = await handler(
+        buildMcpEvent(toolCall("create_custom_exercise", { name: "Press (Machine)" }), authHeaders(token)),
+        ctx
+      );
+      expect(result.statusCode).to.equal(200);
+      const body = parseBody(result);
+      expect(body.result.isError).to.equal(true);
+      expect(body.result.content[0].text).to.include("Name cannot contain special characters");
+    });
+
+    it("rejects valid JSON of the wrong shape for targetMuscles", async () => {
+      const result = await handler(
+        buildMcpEvent(
+          toolCall("create_custom_exercise", { name: "Sled Push", targetMuscles: "{}" }),
+          authHeaders(token)
+        ),
+        ctx
+      );
+      expect(result.statusCode).to.equal(200);
+      const body = parseBody(result);
+      expect(body.result.isError).to.equal(true);
+      expect(body.result.content[0].text).to.include("targetMuscles must be a JSON array of muscle names");
     });
 
     it("rejects invalid muscle names", async () => {
@@ -1189,6 +1397,21 @@ describe("MCP", () => {
 
       const bad = await callTool("set_exercise_data", { key: "squat_barbell", isUnilateral: "maybe" });
       expect(bad.isError).to.equal(true);
+    });
+
+    it("clamps volumeMultiplier into a sane range and neutralizes garbage", async () => {
+      const set = toolData(await callTool("set_exercise_data", { key: "shoulderPress_dumbbell", volumeMultiplier: 2 }));
+      expect(set.volumeMultiplier).to.equal(2);
+
+      const huge = toolData(
+        await callTool("set_exercise_data", { key: "shoulderPress_dumbbell", volumeMultiplier: 1000 })
+      );
+      expect(huge.volumeMultiplier).to.equal(10);
+
+      const negative = toolData(
+        await callTool("set_exercise_data", { key: "shoulderPress_dumbbell", volumeMultiplier: -5 })
+      );
+      expect(negative.volumeMultiplier).to.equal(1);
     });
 
     it("rejects an unknown exercise key", async () => {

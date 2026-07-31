@@ -113,7 +113,22 @@ export function BottomSheetEditProgramExerciseSetContent(props: IBottomSheetEdit
           />
           <MenuItemEditable
             type="boolean"
-            name="Timer"
+            name="Set Time"
+            value={set.setTimer != null ? "true" : "false"}
+            onChange={(value) => {
+              changeSet((s) => {
+                if (value === "true") {
+                  s.setTimer = s.setTimer ?? 30;
+                } else {
+                  s.setTimer = undefined;
+                  s.isOverflowSetTimer = undefined;
+                }
+              });
+            }}
+          />
+          <MenuItemEditable
+            type="boolean"
+            name="Rest"
             value={set.timer != null ? "true" : "false"}
             onChange={(value) => {
               changeSet((s) => {
@@ -122,6 +137,16 @@ export function BottomSheetEditProgramExerciseSetContent(props: IBottomSheetEdit
                 } else {
                   s.timer = undefined;
                 }
+              });
+            }}
+          />
+          <MenuItemEditable
+            type="boolean"
+            name="Auto"
+            value={set.auto ? "true" : "false"}
+            onChange={(value) => {
+              changeSet((s) => {
+                s.auto = value === "true" ? true : undefined;
               });
             }}
           />

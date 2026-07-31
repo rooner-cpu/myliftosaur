@@ -65,6 +65,9 @@ import {
   Progress_updateTimer,
   Progress_changeAmrapAction,
   Progress_stopTimerPure,
+  Progress_checkSetTimer,
+  Progress_isSetTimerCheckDue,
+  Progress_closeTimedSet,
 } from "../models/progress";
 import { Equipment_getUnitOrDefaultForExerciseType } from "../models/equipment";
 import {
@@ -84,6 +87,7 @@ export interface IWatchHistoryRecord {
   dayName: string;
   programName: string;
   exercises: IWatchHistoryEntry[];
+  currentEntryIndex: number;
 }
 
 export interface IWatchHistoryEntry {
@@ -127,6 +131,22 @@ export interface IWatchRestTimer {
   timer: number;
 }
 
+export interface IWatchSetTimerModal {
+  entryIndex: number;
+  // Work-set index (excludes warmups) — what recordSetTimer/closeSetTimer expect.
+  setIndex: number;
+  startedAt: number;
+  setTimer: number;
+  isOverflow: boolean;
+  isCompleted: boolean;
+  restTimer: number;
+  exerciseName: string;
+  imageUrl?: string;
+  // 1-based, counted across warmups+work (the absolute index) to match the rest timer view.
+  currentSet: number;
+  totalSets: number;
+}
+
 export interface IWatchWorkoutStatus {
   isPaused: boolean;
   intervals: [number, number | null][];
@@ -147,12 +167,14 @@ export interface IWatchSet {
   askWeight?: boolean;
   rpe?: number;
   timer?: number;
+  setTimer?: number;
   label?: string;
   isCompleted?: boolean;
   completedReps?: number;
   completedRepsLeft?: number;
   completedWeight?: IWeight;
   completedRpe?: number;
+  completedSetTimer?: number;
   status: IWatchSetStatus;
   plates?: string;
   isWarmup: boolean;
@@ -220,12 +242,14 @@ function setToWatchSet(
     askWeight: set.askWeight,
     rpe: set.rpe,
     timer: set.timer,
+    setTimer: set.setTimer,
     label: set.label,
     isCompleted: set.isCompleted,
     completedReps: set.completedReps,
     completedRepsLeft: isUnilateral ? set.completedRepsLeft : undefined,
     completedWeight: set.completedWeight,
     completedRpe: set.completedRpe,
+    completedSetTimer: set.completedSetTimer,
     status: isWarmup ? Reps_setWarmupStatus([set]) : Reps_setsStatus([set]),
     plates,
     isWarmup,
@@ -450,6 +474,7 @@ class LiftosaurWatch {
       dayName: historyRecord.dayName,
       programName: historyRecord.programName,
       exercises,
+      currentEntryIndex: historyRecord.currentEntryIndex ?? 0,
     };
   }
 
@@ -714,8 +739,8 @@ class LiftosaurWatch {
       if (!progress) {
         return { success: false, error: "No active workout" };
       }
-      if (progress.ui?.amrapModal) {
-        progress = { ...progress, ui: { ...progress.ui, amrapModal: undefined } };
+      if (progress.amrapModal) {
+        progress = { ...progress, amrapModal: undefined };
       }
       const entry = progress.entries[entryIndex];
       if (!entry) {
@@ -755,6 +780,147 @@ class LiftosaurWatch {
         progress: [newProgress],
       };
       return { success: true, data: newStorage };
+    });
+  }
+
+  // Cheap read-only predicate the watch polls every tick before calling the (persisting + syncing)
+  // checkSetTimer mutation — mirrors the in-app Thunk_checkSetTimer gate so we don't write storage every second.
+  public static isSetTimerCheckDue(storageJson: string): string {
+    return this.getStorage<{ due: boolean }>(storageJson, (storage) => {
+      const progress = storage.progress?.[0];
+      if (!progress) {
+        return { success: true, data: { due: false } };
+      }
+      return { success: true, data: { due: Progress_isSetTimerCheckDue(progress, Date.now()) } };
+    });
+  }
+
+  // Polled by the watch (e.g. every second) to drive `auto` set timer transitions; no-op otherwise.
+  public static checkSetTimer(storageJson: string, deviceId: string): string {
+    return this.modifyStorage(storageJson, deviceId, (storage): IEither<IStorage, string> => {
+      const progress = storage.progress?.[0];
+      if (!progress) {
+        return { success: false, error: "No active workout" };
+      }
+      const evaluatedProgram = getEvaluatedProgram(storage);
+      const stm = progress.setTimer;
+      const entryIndex = stm?.entryIndex ?? progress.timerEntryIndex;
+      const entry = entryIndex != null ? progress.entries[entryIndex] : undefined;
+      const programExercise =
+        evaluatedProgram && entry
+          ? Program_getProgramExercise(progress.day, evaluatedProgram, entry.programExerciseId)
+          : undefined;
+      const newProgress = Progress_checkSetTimer(
+        storage.settings,
+        storage.stats,
+        progress,
+        storage.subscription,
+        programExercise,
+        evaluatedProgram?.states
+      );
+      return { success: true, data: { ...storage, progress: [newProgress] } };
+    });
+  }
+
+  // Returns the running set-timer clock for the watch's set-timer screen, or undefined when no timed set
+  // is active. Like the AMRAP modal, it reads progress.setTimer (which now syncs across devices).
+  public static getSetTimerModal(storageJson: string): string {
+    return this.getStorage<IWatchSetTimerModal | undefined>(storageJson, (storage) => {
+      const progress = storage.progress?.[0];
+      if (!progress) {
+        return { success: true, data: undefined };
+      }
+      const stm = progress.setTimer;
+      // A timed AMRAP set keeps progress.setTimer set behind the amrap modal (see Progress_proceedAfterTimedSet);
+      // yield to the amrap screen here like the in-app banner does, then re-present after it resolves (keep) or
+      // stay gone (record).
+      if (!stm || progress.amrapModal != null) {
+        return { success: true, data: undefined };
+      }
+      const entry = progress.entries[stm.entryIndex];
+      const set = entry?.sets[stm.setIndex];
+      if (!entry || !set) {
+        return { success: true, data: undefined };
+      }
+      const settings = storage.settings;
+      const exercise = Exercise_get(entry.exercise, settings.exercises);
+      const absoluteSetIndex = entry.warmupSets.length + stm.setIndex;
+      const data: IWatchSetTimerModal = {
+        entryIndex: stm.entryIndex,
+        setIndex: stm.setIndex,
+        startedAt: stm.startedAt,
+        setTimer: set.setTimer ?? 0,
+        isOverflow: !!set.isOverflowSetTimer,
+        isCompleted: !!set.isCompleted,
+        restTimer: set.timer ?? 0,
+        exerciseName: exercise.name,
+        imageUrl: ExerciseImageUtils_url(exercise, "small", settings),
+        currentSet: absoluteSetIndex + 1,
+        totalSets: entry.warmupSets.length + entry.sets.length,
+      };
+      return { success: true, data };
+    });
+  }
+
+  // Records a timed set from its running clock ("Stop & record" / "Log & keep timing"). Mirrors the in-app
+  // Thunk_recordSetTimer: stale-guards against a clock that already closed/moved, then defers all the
+  // completion/rest logic to Progress_completeSetAction. recordedSeconds is captured at tap time on the watch.
+  public static recordSetTimer(
+    storageJson: string,
+    deviceId: string,
+    entryIndex: number,
+    setIndex: number,
+    keepTiming: boolean,
+    recordedSeconds: number
+  ): string {
+    return this.modifyStorage(storageJson, deviceId, (storage): IEither<IStorage, string> => {
+      const progress = storage.progress?.[0];
+      if (!progress) {
+        return { success: false, error: "No active workout" };
+      }
+      const stm = progress.setTimer;
+      if (stm == null || stm.entryIndex !== entryIndex || stm.setIndex !== setIndex) {
+        return { success: true, data: storage };
+      }
+      const evaluatedProgram = getEvaluatedProgram(storage);
+      const entry = progress.entries[entryIndex];
+      const programExercise =
+        evaluatedProgram && entry
+          ? Program_getProgramExercise(progress.day, evaluatedProgram, entry.programExerciseId)
+          : undefined;
+      lg("watch-record-set-timer");
+      const newProgress = Progress_completeSetAction(
+        storage.settings,
+        storage.stats,
+        progress,
+        {
+          type: "CompleteSetAction",
+          entryIndex,
+          setIndex,
+          mode: "workout",
+          programExercise,
+          otherStates: evaluatedProgram?.states,
+          forceUpdateEntryIndex: false,
+          isExternal: true,
+          isPlayground: false,
+          keepSetTimerRunning: keepTiming,
+          recordedSeconds,
+        },
+        storage.subscription
+      );
+      return { success: true, data: { ...storage, progress: [newProgress] } };
+    });
+  }
+
+  // Discard the set timer banner from the watch (no recording); starts deferred rest if already logged.
+  public static closeSetTimer(storageJson: string, deviceId: string): string {
+    return this.modifyStorage(storageJson, deviceId, (storage): IEither<IStorage, string> => {
+      const progress = storage.progress?.[0];
+      if (!progress) {
+        return { success: false, error: "No active workout" };
+      }
+      const newProgress = Progress_closeTimedSet(progress, storage.settings, storage.subscription);
+      return { success: true, data: { ...storage, progress: [newProgress] } };
     });
   }
 
@@ -842,6 +1008,51 @@ class LiftosaurWatch {
         ...set,
         completedWeight: { value: weightValue, unit },
       };
+    });
+  }
+
+  // Edit or clear the recorded set-timer duration for a set (mirrors the in-app NavModalSetTimerEdit).
+  // A negative `seconds` clears it.
+  public static updateCompletedSetTimer(
+    storageJson: string,
+    deviceId: string,
+    entryIndex: number,
+    globalSetIndex: number,
+    seconds: number
+  ): string {
+    lg("watch-edit-set-timer");
+    return this.modifySet(storageJson, deviceId, entryIndex, globalSetIndex, (set) => {
+      if (seconds < 0) {
+        // Clearing on the watch wipes the whole logged result (time + reps/weight/rpe), not just the time,
+        // so the set reads as un-recorded.
+        return {
+          ...set,
+          completedSetTimer: undefined,
+          completedReps: undefined,
+          completedRepsLeft: undefined,
+          completedRpe: undefined,
+          completedWeight: undefined,
+          isCompleted: false,
+        };
+      }
+      return { ...set, completedSetTimer: seconds };
+    });
+  }
+
+  // The shown exercise, synced so the phone follows the watch (and vice versa). No-op when unchanged so a
+  // cursor move that merely reflects an incoming sync doesn't re-broadcast.
+  public static setCurrentEntryIndex(storageJson: string, deviceId: string, entryIndex: number): string {
+    return this.modifyStorage(storageJson, deviceId, (storage) => {
+      const progress = storage.progress?.[0];
+      if (!progress) {
+        return { success: false, error: "No active workout" };
+      }
+      if ((progress.currentEntryIndex ?? 0) === entryIndex) {
+        return { success: true, data: storage };
+      }
+      const newProgress: IHistoryRecord = { ...progress, currentEntryIndex: entryIndex };
+      const newStorage: IStorage = { ...storage, progress: [newProgress] };
+      return { success: true, data: newStorage };
     });
   }
 
@@ -944,7 +1155,7 @@ class LiftosaurWatch {
         return { success: true, data: undefined };
       }
 
-      const modalData = progress.ui?.amrapModal;
+      const modalData = progress.amrapModal;
       if (!modalData) {
         return { success: true, data: undefined };
       }
@@ -1036,7 +1247,7 @@ class LiftosaurWatch {
         return { success: false, error: "No active workout" };
       }
 
-      const modalData = progress.ui?.amrapModal;
+      const modalData = progress.amrapModal;
       if (!modalData) {
         return { success: false, error: "No amrap modal data" };
       }
@@ -1316,7 +1527,7 @@ class LiftosaurWatch {
 
       // Calculate stats using History helpers
       const timeMs = History_workoutTime(record);
-      const volume = History_totalRecordWeight(record, settings.units);
+      const volume = History_totalRecordWeight(record, settings);
       const totalSets = History_totalRecordSets(record);
       const totalReps = History_totalRecordReps(record);
 

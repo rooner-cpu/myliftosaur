@@ -7,6 +7,8 @@ import {
   Progress_getProgressById,
   Progress_completeSetAction,
   Progress_changeAmrapAction,
+  Progress_checkSetTimer,
+  Progress_closeTimedSet,
   Progress_setProgress,
   Progress_finishWorkout,
   Progress_isCurrent,
@@ -42,6 +44,7 @@ import {
   IStats,
 } from "../types";
 import { IndexedDBUtils_get, IndexedDBUtils_set } from "../utils/indexeddb";
+import { Persistence } from "../utils/persistence";
 import { basicBeginnerProgram } from "../programs/basicBeginnerProgram";
 import { AdminDebug_isDebugAccountId } from "../models/adminDebug";
 import { LogUtils_log } from "../utils/log";
@@ -65,7 +68,6 @@ import { Exercise_toKey } from "../models/exercise";
 import { NativeWorkoutBridge_discardWorkout } from "../utils/nativeWorkoutBridge";
 import { NativeWatchBridge_sendDiscardWorkoutToWatch } from "../utils/nativeWatchBridge";
 import { NativeWorkoutMirroring_resetWatchWorkoutState } from "../utils/nativeWorkoutMirroringBridge";
-import { SendMessage_isIos } from "../utils/sendMessage";
 import { IPlannerProgramExercise } from "../pages/planner/models/types";
 import { IByExercise } from "../pages/planner/plannerEvaluator";
 import { EditProgramUiHelpers_getChangedKeys } from "../components/editProgram/editProgramUi/editProgramUiHelpers";
@@ -76,6 +78,7 @@ import { Stats_getCurrentMovingAverageBodyweight } from "../models/stats";
 import { Weight_build, Weight_eq } from "../models/weight";
 import { PerfTracker_recordEvent, PerfTracker_getSessionId } from "../utils/perfTracker";
 import { PerfEnabled_isEnabled, PerfEnabled_tier2 } from "../utils/perfEnabled";
+import { PerfProbe_onAction, PerfProbe_isTarget } from "../utils/perfSetCompleteProbe";
 import { PerfScorecard_recordAction } from "../utils/perfScorecard";
 
 declare let __COMMIT_HASH__: string;
@@ -98,7 +101,7 @@ declare let __HOST__: string;
 
 export async function getInitialState(
   client: Window["fetch"],
-  args?: { url?: URL; rawStorage?: string; storage?: IStorage; deviceId?: string }
+  args?: { url?: URL; rawStorage?: string; localStorage?: ILocalStorage; storage?: IStorage; deviceId?: string }
 ): Promise<IState> {
   const url =
     args?.url ||
@@ -109,6 +112,8 @@ export async function getInitialState(
   let storage: ILocalStorage | undefined;
   if (args?.storage) {
     storage = { storage: args.storage };
+  } else if (args?.localStorage != null) {
+    storage = args.localStorage;
   } else if (args?.rawStorage != null) {
     try {
       storage = JSON.parse(args.rawStorage);
@@ -185,7 +190,7 @@ export async function getInitialState(
     nosync,
     deviceId,
   });
-  LogUtils_log(newState.storage.tempUserId, "ls-initialize-user", {}, [], () => undefined);
+  LogUtils_log(newState.storage.tempUserId, "ls-initialize-user", {}, []);
   return newState;
 }
 
@@ -243,6 +248,30 @@ export type ICompleteSetAction = {
   mode: IProgressMode;
   forceUpdateEntryIndex: boolean;
   isExternal: boolean;
+  // Set when completing a timed set from its running clock: the elapsed seconds to record (the model
+  // otherwise derives it from setTimerModal.startedAt), and whether to keep the clock running afterwards.
+  recordedSeconds?: number;
+  keepSetTimerRunning?: boolean;
+};
+
+// Polled by any surface (banner tick, rest-timer tick, live activity, watch) to drive time-based set
+// timer transitions: auto-fire when the work timer hits its target, or auto-advance after rest expires.
+// No-op (returns the same progress) when nothing is due.
+export type ICheckSetTimerAction = {
+  type: "CheckSetTimerAction";
+  programExercise?: IPlannerProgramExercise;
+  otherStates?: IByExercise<IProgramState>;
+  now?: number;
+  // When a playground timer auto-fires at its target, the completion must stay playground-scoped — otherwise
+  // it resumes/updates the real native workout (playground records have id 0 and read as "current").
+  isPlayground?: boolean;
+};
+
+// Discard the set timer banner (no recording); starts the deferred rest if the set was already logged.
+export type ICloseSetTimerAction = {
+  type: "CloseSetTimerAction";
+  // Playground has no rest timers, so closing a logged set-timer there must not start a deferred rest.
+  isPlayground?: boolean;
 };
 
 export type IFinishProgramDayAction = {
@@ -318,7 +347,12 @@ export type IUpdateProgressAction = {
   desc: string;
 };
 
-export type ICardsAction = ICompleteSetAction | IChangeAMRAPAction | IUpdateProgressAction;
+export type ICardsAction =
+  | ICompleteSetAction
+  | IChangeAMRAPAction
+  | IUpdateProgressAction
+  | ICheckSetTimerAction
+  | ICloseSetTimerAction;
 
 export type IAction =
   | ICardsAction
@@ -506,7 +540,7 @@ export function defaultOnActions(env: IEnv): IReducerOnAction[] {
 }
 
 export const reducerWrapper =
-  (storeToLocalStorage: boolean): Reducer<IState, IAction> =>
+  (storeToLocalStorage: boolean, persistence: Persistence): Reducer<IState, IAction> =>
   (state, action) => {
     Diagnostics_setLastState(state);
     Diagnostics_recordAction({ ...action, time: DateUtils_formatHHMMSS(Date.now(), true) });
@@ -538,37 +572,54 @@ export const reducerWrapper =
       newState = { ...newState, storage: { ...newState.storage, _versions: versions } };
     }
 
-    if (SendMessage_isIos()) {
-      newStorageApproach(state, newState, isStorageChanged);
-    } else {
-      if (typeof window !== "undefined" && window.setTimeout && window.clearTimeout) {
-        window.tempUserId = newState.storage.tempUserId;
-        if (timerId != null) {
-          window.clearTimeout(timerId);
-        }
+    if (typeof window !== "undefined" && window.setTimeout && window.clearTimeout) {
+      window.tempUserId = newState.storage.tempUserId;
+      if (timerId != null) {
+        window.clearTimeout(timerId);
+      }
 
-        (window as any).state = newState;
-        if (storeToLocalStorage && newState.errors.corruptedstorage == null) {
-          timerId = window.setTimeout(async () => {
-            clearTimeout(timerId);
+      (window as any).state = newState;
+      if (storeToLocalStorage && newState.errors.corruptedstorage == null) {
+        timerId = window.setTimeout(async () => {
+          clearTimeout(timerId);
 
-            const newState2: IState = (window as any).state;
-            timerId = undefined;
-            const userId = newState2.user?.id || newState2.storage.tempUserId;
-            const localStorage: ILocalStorage = {
+          const newState2: IState = (window as any).state;
+          timerId = undefined;
+          const userId = newState2.user?.id || newState2.storage.tempUserId;
+          await IndexedDBUtils_set("current_account", userId);
+          const probeTarget = PerfProbe_isTarget();
+          try {
+            const stats = await persistence.save(`liftosaur_${userId}`, {
               storage: newState2.storage,
               lastSyncedStorage: newState2.lastSyncedStorage,
-            };
-            await IndexedDBUtils_set("current_account", userId);
-            await IndexedDBUtils_set(`liftosaur_${userId}`, JSON.stringify(localStorage));
-          }, 100);
-        }
+            });
+            if (probeTarget) {
+              lg("perf-persist", {
+                stringify_ms: stats.stringifyMs,
+                write_ms: stats.writeMs,
+                bytes: stats.bytes,
+                shards: stats.shards.join(","),
+              });
+            }
+          } catch (e) {
+            // Write failed (e.g. quota) — the write cache wasn't updated, so the next
+            // save retries these shards instead of skipping them as "unchanged"
+            lg("ls-persistence-save-error", { error: String(e) });
+          }
+        }, 100);
       }
     }
 
     if (perfOn) {
       const perfDurationMs = Date.now() - perfSyncStart;
       PerfScorecard_recordAction(perfActionDesc ?? perfActionType, perfDurationMs);
+      if (
+        perfActionType === "CompleteSetAction" ||
+        perfActionType === "ChangeAMRAPAction" ||
+        perfActionType === "UpdateProgress"
+      ) {
+        PerfProbe_onAction(perfActionDesc ?? perfActionType, perfDurationMs);
+      }
       if (PerfEnabled_tier2()) {
         PerfTracker_recordEvent({
           type: "action",
@@ -582,30 +633,6 @@ export const reducerWrapper =
     }
     return newState;
   };
-
-function newStorageApproach(oldState: IState, newState: IState, isStorageChanged: boolean): IState {
-  if (typeof window !== "undefined") {
-    window.tempUserId = newState.storage.tempUserId;
-    (window as any).state = newState;
-    const isLastSyncChanged = Storage_isChanged(oldState.lastSyncedStorage, newState.lastSyncedStorage);
-    const isLocalStorageChanged = isStorageChanged || isLastSyncChanged;
-    if (isLocalStorageChanged && newState.errors.corruptedstorage == null) {
-      const userId = newState.user?.id || newState.storage.tempUserId;
-      const localStorage: ILocalStorage = {
-        storage: newState.storage,
-        lastSyncedStorage: newState.lastSyncedStorage,
-      };
-      const json = JSON.stringify(localStorage);
-      Promise.all([
-        IndexedDBUtils_set("current_account", userId),
-        IndexedDBUtils_set(`liftosaur_${userId}`, json),
-      ]).then(() => {
-        lg("saved-to-storage", undefined, undefined, userId);
-      });
-    }
-  }
-  return newState;
-}
 
 export function buildCardsReducer(
   settings: ISettings,
@@ -622,6 +649,21 @@ export function buildCardsReducer(
         const newProgress = Progress_changeAmrapAction(settings, stats, progress, action, subscription);
         return newProgress;
       }
+      case "CheckSetTimerAction": {
+        return Progress_checkSetTimer(
+          settings,
+          stats,
+          progress,
+          subscription,
+          action.programExercise,
+          action.otherStates,
+          action.now,
+          action.isPlayground
+        );
+      }
+      case "CloseSetTimerAction": {
+        return Progress_closeTimedSet(progress, settings, subscription, action.isPlayground);
+      }
       case "UpdateProgress": {
         return action.lensRecordings.reduce((memo, recording) => recording.fn(memo), progress);
       }
@@ -630,7 +672,13 @@ export function buildCardsReducer(
 }
 
 export const reducer: Reducer<IState, IAction> = (state, action): IState => {
-  if (action.type === "CompleteSetAction" || action.type === "ChangeAMRAPAction" || action.type === "UpdateProgress") {
+  if (
+    action.type === "CompleteSetAction" ||
+    action.type === "ChangeAMRAPAction" ||
+    action.type === "CheckSetTimerAction" ||
+    action.type === "CloseSetTimerAction" ||
+    action.type === "UpdateProgress"
+  ) {
     const progress = Progress_getProgress(state);
     if (progress == null) {
       return state;

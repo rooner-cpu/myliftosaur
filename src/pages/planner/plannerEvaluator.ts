@@ -399,6 +399,13 @@ export function PlannerEvaluator_fillSetReuses(
         exercise.points.reuseSetPoint
       );
     }
+    if ((originalExercise.exercise.exerciseVariations?.length ?? 0) > 1) {
+      throw PlannerSyntaxError.fromPoint(
+        exercise.fullName,
+        `Cannot reuse '${reuse.fullName}' - it has multiple exercise variations. Move the shared sets/progress into a 'used: none' template and reuse that instead`,
+        exercise.points.reuseSetPoint
+      );
+    }
     if (
       originalExercise.exercise.progress?.reuse != null &&
       exercise.progress == null &&
@@ -569,8 +576,17 @@ export function PlannerEvaluator_fillProgressReuses(
       if (!originalProgress || !dayData) {
         throw PlannerSyntaxError.fromPoint(exercise.fullName, "Original exercise should specify progress", point);
       }
-      if (originalProgress.reuse?.fullName != null && !originalProgress.reuse?.exercise?.notused) {
-        throw PlannerSyntaxError.fromPoint(exercise.fullName, `Original exercise cannot reuse another progress`, point);
+      if (originalProgress.reuse?.fullName != null) {
+        // originalProgress.reuse.exercise may not be resolved yet (resolution goes in document
+        // order), so check notused via metadata, which is complete before this pass.
+        const originalReuseKey = PlannerKey_fromFullName(originalProgress.reuse.fullName, settings.exercises);
+        if (!metadata.notused.has(originalReuseKey)) {
+          throw PlannerSyntaxError.fromPoint(
+            exercise.fullName,
+            `Original exercise cannot reuse another progress`,
+            point
+          );
+        }
       }
       if (originalProgress.type !== "custom") {
         throw PlannerSyntaxError.fromPoint(
@@ -673,8 +689,12 @@ export function PlannerEvaluator_fillUpdateReuses(
       if (!originalUpdate || !dayData) {
         throw PlannerSyntaxError.fromPoint(exercise.fullName, "Original exercise should specify update", point);
       }
-      if (originalUpdate.reuse?.fullName != null && !originalUpdate.reuse?.exercise?.notused) {
-        throw PlannerSyntaxError.fromPoint(exercise.fullName, `Original exercise cannot reuse another update`, point);
+      if (originalUpdate.reuse?.fullName != null) {
+        // Same as the progress check above: reuse.exercise may not be resolved yet.
+        const originalReuseKey = PlannerKey_fromFullName(originalUpdate.reuse.fullName, settings.exercises);
+        if (!metadata.notused.has(originalReuseKey)) {
+          throw PlannerSyntaxError.fromPoint(exercise.fullName, `Original exercise cannot reuse another update`, point);
+        }
       }
       if (originalUpdate.type !== "custom") {
         throw PlannerSyntaxError.fromPoint(exercise.fullName, "Original exercise should specify custom update", point);
@@ -755,12 +775,14 @@ export function PlannerEvaluator_postProcess(
   for (const week of evaluatedWeeks) {
     for (const day of week) {
       if (day.success) {
+        // Mirrors the sort in PlannerProgram_groupedTopLines: repeat-materialized exercises
+        // (pushed to the end by fillRepeats) move to their source week's position - before the
+        // used exercise sharing their exerciseIndex. Other ties keep document order.
         day.data.sort((ex1, ex2) => {
-          if (ex1.exerciseIndex === ex2.exerciseIndex) {
-            return (ex1.repeating[0] ?? 0) - (ex2.repeating[0] ?? 0);
-          } else {
+          if (ex1.exerciseIndex !== ex2.exerciseIndex) {
             return ex1.exerciseIndex - ex2.exerciseIndex;
           }
+          return (ex1.isRepeat ? 0 : 1) - (ex2.isRepeat ? 0 : 1);
         });
       }
     }
@@ -778,7 +800,21 @@ export function PlannerEvaluator_checkUnknownExercises(
   exercise: IPlannerProgramExercise,
   metadata: IPlannerEvalMetadata
 ): void {
-  if (exercise.exerciseType == null && !metadata.notused.has(exercise.key)) {
+  if (metadata.notused.has(exercise.key)) {
+    return;
+  }
+  const variations = exercise.exerciseVariations;
+  if (variations != null && variations.length > 1) {
+    for (const variation of variations) {
+      if (variation.exerciseType == null) {
+        throw PlannerSyntaxError.fromPoint(
+          exercise.fullName,
+          `Unknown exercise ${variation.name}`,
+          exercise.points.fullName
+        );
+      }
+    }
+  } else if (exercise.exerciseType == null) {
     throw PlannerSyntaxError.fromPoint(
       exercise.fullName,
       `Unknown exercise ${exercise.name}`,

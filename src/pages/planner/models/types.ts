@@ -29,6 +29,9 @@ export interface IPlannerProgramExerciseGlobals {
   logRpe?: boolean;
   rpe?: number;
   timer?: number;
+  setTimer?: number;
+  isOverflowSetTimer?: boolean;
+  auto?: boolean;
   percentage?: number;
   weight?: IWeight;
   askWeight?: boolean;
@@ -60,6 +63,7 @@ export type IPlannerProgramExercise = {
   notused?: boolean;
   evaluatedSetVariations: IPlannerProgramExerciseEvaluatedSetVariation[];
   setVariations: IPlannerProgramExerciseSetVariation[];
+  exerciseVariations: IPlannerProgramExerciseVariation[];
   warmupSets?: IPlannerProgramExerciseWarmupSet[];
   descriptions: IProgramExerciseDescriptions;
   globals: IPlannerProgramExerciseGlobals;
@@ -81,6 +85,12 @@ export interface IPlannerProgramExerciseSetVariation {
   isCurrent: boolean;
 }
 
+export interface IPlannerProgramExerciseVariation {
+  exerciseType?: IExerciseType;
+  name: string;
+  isCurrent: boolean;
+}
+
 export interface IPlannerProgramExerciseEvaluatedSetVariation {
   sets: IPlannerProgramExerciseEvaluatedSet[];
   isCurrent: boolean;
@@ -91,6 +101,9 @@ export interface IPlannerProgramExerciseEvaluatedSet {
   weight?: IWeight | IPercentage;
   minrep?: number;
   timer?: number;
+  setTimer?: number;
+  isOverflowSetTimer?: boolean;
+  auto?: boolean;
   rpe?: number;
   logRpe: boolean;
   label?: string;
@@ -102,6 +115,9 @@ export interface IPlannerProgramExerciseEvaluatedSet {
 export interface IPlannerProgramExerciseSet {
   repRange?: IPlannerProgramExerciseRepRange;
   timer?: number;
+  setTimer?: number;
+  isOverflowSetTimer?: boolean;
+  auto?: boolean;
   rpe?: number;
   logRpe?: boolean;
   percentage?: number;
@@ -267,8 +283,11 @@ export interface IPlannerExerciseUiEditSetBottomSheet {
 export interface IPlannerExerciseUi {
   modalExercise?: IModalExerciseUi;
   exercisePickerState?: IExercisePickerState;
+  exercisePickerChange?: "variationAdd" | "variationEdit";
+  exercisePickerVariationIndex?: number;
   isProgressEnabled?: boolean;
   isUpdateEnabled?: boolean;
+  isExerciseVariationsEnabled?: boolean;
   showAddStateVariableModal?: boolean;
   showEditProgressScriptModal?: boolean;
   showEditUpdateScriptModal?: boolean;

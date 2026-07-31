@@ -1,6 +1,17 @@
 // import util from "util";
 import { SyntaxNode } from "@lezer/common";
-import { IScriptBindings, IScriptFnContext, IScriptFunctions } from "./models/progress";
+import { IScriptBindings, IScriptFnContext } from "./models/progress";
+import {
+  IScriptFunctions,
+  IScriptFnName,
+  IScriptStaticType,
+  LiftoscriptFns_isFnName,
+  LiftoscriptFns_arity,
+  LiftoscriptFns_argSignature,
+  LiftoscriptFns_isValidArg,
+  LiftoscriptFns_acceptsTypeAt,
+  LiftoscriptFns_bindingStaticType,
+} from "./liftoscriptFns";
 import {
   Weight_gt,
   Weight_lt,
@@ -136,11 +147,13 @@ export interface ILiftoscriptVariableValue<T> {
 
 export type ILiftoscriptEvaluatorUpdate =
   | { type: "setVariationIndex"; value: ILiftoscriptVariableValue<number> }
+  | { type: "exerciseVariationIndex"; value: ILiftoscriptVariableValue<number> }
   | { type: "descriptionIndex"; value: ILiftoscriptVariableValue<number> }
   | { type: "reps"; value: ILiftoscriptVariableValue<number> }
   | { type: "minReps"; value: ILiftoscriptVariableValue<number> }
   | { type: "weights"; value: ILiftoscriptVariableValue<number | IPercentage | IWeight> }
   | { type: "timers"; value: ILiftoscriptVariableValue<number> }
+  | { type: "setTime"; value: ILiftoscriptVariableValue<number> }
   | { type: "RPE"; value: ILiftoscriptVariableValue<number> }
   | { type: "logrpes"; value: ILiftoscriptVariableValue<number> }
   | { type: "amraps"; value: ILiftoscriptVariableValue<number> }
@@ -194,6 +207,48 @@ export class LiftoscriptEvaluator {
   private error(message: string, node: SyntaxNode): never {
     const [line, offset] = this.getLineAndOffset(node);
     throw new LiftoscriptSyntaxError(`${message} (${line}:${offset})`, line, offset, node.from, node.to);
+  }
+
+  private staticTypeOfNode(node: SyntaxNode): IScriptStaticType | undefined {
+    if (node.type.name === NodeName.NumberExpression) {
+      return "number";
+    } else if (node.type.name === NodeName.WeightExpression) {
+      return "weight";
+    } else if (node.type.name === NodeName.Percentage) {
+      return "percentage";
+    } else if (node.type.name === NodeName.VariableExpression) {
+      if (node.getChildren(NodeName.VariableIndex).length > 0) {
+        return undefined;
+      }
+      const nameNode = node.getChild(NodeName.Keyword);
+      const name = nameNode != null ? this.getValue(nameNode) : undefined;
+      return name != null ? LiftoscriptFns_bindingStaticType(name) : undefined;
+    }
+    return undefined;
+  }
+
+  private validateFnArg(name: IScriptFnName, index: number, node: SyntaxNode, value: unknown): void {
+    if (LiftoscriptFns_isValidArg(name, index, value)) {
+      return;
+    }
+    if (Array.isArray(value) && !LiftoscriptFns_acceptsTypeAt(name, index, "array")) {
+      const argText = this.getValue(node);
+      this.error(
+        `Function '${name}' doesn't accept arrays. Use an index to pick one value, like '${argText}[1]'`,
+        node
+      );
+    }
+    const argSignature = LiftoscriptFns_argSignature(name, index);
+    const printedValue =
+      Weight_is(value) || Weight_isPct(value)
+        ? `${Weight_print(value)}`
+        : Array.isArray(value)
+          ? "an array"
+          : String(value);
+    this.error(
+      `Argument ${index + 1} (${argSignature?.name}) of '${name}' should be ${argSignature?.hint}, but got ${printedValue}`,
+      node
+    );
   }
 
   private getLineAndOffset(node: SyntaxNode): [number, number] {
@@ -298,12 +353,35 @@ export class LiftoscriptEvaluator {
           assert(NodeName.BuiltinFunctionExpression);
         }
         const name = this.getValue(keyword);
-        if (!(name in this.fns)) {
+        if (!LiftoscriptFns_isFnName(name)) {
           this.error(`Unknown function '${name}'`, keyword);
         }
-        if (name === "sets" && fnArgs.length !== 9) {
-          this.error(`'sets' function should have 9 arguments`, keyword);
+        const arity = LiftoscriptFns_arity(name);
+        if (fnArgs.length < arity.min || (arity.max != null && fnArgs.length > arity.max)) {
+          const expected = arity.max == null || arity.max === arity.min ? `${arity.min}` : `${arity.min}-${arity.max}`;
+          this.error(
+            `Function '${name}' expects ${expected} argument${arity.max === 1 ? "" : "s"}, but got ${fnArgs.length}`,
+            keyword
+          );
         }
+        fnArgs.forEach((fnArg, index) => {
+          const staticType = this.staticTypeOfNode(fnArg);
+          if (staticType != null && !LiftoscriptFns_acceptsTypeAt(name, index, staticType)) {
+            if (staticType === "array") {
+              const argText = this.getValue(fnArg);
+              this.error(
+                `Function '${name}' doesn't accept arrays, and '${argText}' is an array. Use an index to pick one value, like '${argText}[1]'`,
+                fnArg
+              );
+            } else {
+              const argSignature = LiftoscriptFns_argSignature(name, index);
+              this.error(
+                `Argument ${index + 1} (${argSignature?.name}) of '${name}' should be ${argSignature?.hint}, but '${this.getValue(fnArg)}' is a ${staticType}`,
+                fnArg
+              );
+            }
+          }
+        });
       } else if (cursor.node.type.name === NodeName.ForExpression) {
         const variableNode = cursor.node.getChild(NodeName.Variable);
         if (variableNode != null) {
@@ -326,6 +404,7 @@ export class LiftoscriptEvaluator {
                   "minReps",
                   "numberOfSets",
                   "timers",
+                  "setTime",
                   "askweights",
                   "amraps",
                   "logrpes",
@@ -368,6 +447,8 @@ export class LiftoscriptEvaluator {
             "completedRepsLeft",
             "completedWeights",
             "timers",
+            "setTime",
+            "completedSetTime",
             "w",
             "r",
             "cr",
@@ -377,6 +458,7 @@ export class LiftoscriptEvaluator {
             "bodyweight",
             "RPE",
             "setVariationIndex",
+            "exerciseVariationIndex",
             "descriptionIndex",
             "numberOfSets",
             "programNumberOfSets",
@@ -455,6 +537,7 @@ export class LiftoscriptEvaluator {
     this.bindings.r = this.bindings.reps.slice(0, evaluatedValue);
     this.bindings.mr = this.bindings.minReps.slice(0, evaluatedValue);
     this.bindings.timers = this.bindings.timers.slice(0, evaluatedValue);
+    this.bindings.setTime = this.bindings.setTime.slice(0, evaluatedValue);
     this.bindings.amraps = this.bindings.amraps.slice(0, evaluatedValue);
     this.bindings.logrpes = this.bindings.logrpes.slice(0, evaluatedValue);
     this.bindings.askweights = this.bindings.askweights.slice(0, evaluatedValue);
@@ -479,6 +562,7 @@ export class LiftoscriptEvaluator {
         );
         this.bindings.reps[i] = this.bindings.reps[ns] ?? 0;
         this.bindings.timers[i] = this.bindings.timers[ns];
+        this.bindings.setTime[i] = this.bindings.setTime[ns];
         this.bindings.amraps[i] = this.bindings.amraps[ns];
         this.bindings.logrpes[i] = this.bindings.logrpes[ns];
         this.bindings.askweights[i] = this.bindings.askweights[ns];
@@ -504,7 +588,7 @@ export class LiftoscriptEvaluator {
   }
 
   private changeBinding(
-    key: "reps" | "weights" | "RPE" | "minReps" | "timers" | "logrpes" | "amraps" | "askweights",
+    key: "reps" | "weights" | "RPE" | "minReps" | "timers" | "setTime" | "logrpes" | "amraps" | "askweights",
     expression: SyntaxNode,
     indexExprs: SyntaxNode[],
     op: IAssignmentOp
@@ -530,7 +614,7 @@ export class LiftoscriptEvaluator {
           );
           value = Weight_convertToWeight(this.bindings.rm1, newValue, this.unit);
           this.bindings.originalWeights[i] = value;
-          this.bindings.weights[i] = this.fns.roundWeight(value, this.fnContext);
+          this.bindings.weights[i] = this.fns.roundWeight([value], this.fnContext, this.bindings);
         }
       }
     } else {
@@ -556,9 +640,11 @@ export class LiftoscriptEvaluator {
       | "reps"
       | "weights"
       | "timers"
+      | "setTime"
       | "RPE"
       | "minReps"
       | "setVariationIndex"
+      | "exerciseVariationIndex"
       | "descriptionIndex"
       | "numberOfSets"
       | "logrpes"
@@ -570,10 +656,18 @@ export class LiftoscriptEvaluator {
   ): number | IWeight | IPercentage {
     const indexes = indexExprs.map((ie) => getChildren(ie)[0]);
     const maxTargetLength =
-      key === "setVariationIndex" || key === "descriptionIndex" ? 2 : key === "numberOfSets" ? 3 : 4;
+      key === "setVariationIndex" || key === "exerciseVariationIndex" || key === "descriptionIndex"
+        ? 2
+        : key === "numberOfSets"
+          ? 3
+          : 4;
     if (key === "setVariationIndex") {
       if (indexes.length > maxTargetLength) {
         this.error(`setVariationIndex can only have 2 values inside [*:*]`, expression);
+      }
+    } else if (key === "exerciseVariationIndex") {
+      if (indexes.length > maxTargetLength) {
+        this.error(`exerciseVariationIndex can only have 2 values inside [*:*]`, expression);
       }
     } else if (key === "descriptionIndex") {
       if (indexes.length > maxTargetLength) {
@@ -599,6 +693,11 @@ export class LiftoscriptEvaluator {
         const [week, day] = normalizedIndexValues;
         if ((week === "*" || week === this.bindings.week) && (day === "*" || day === this.bindings.day)) {
           this.bindings.setVariationIndex = result;
+        }
+      } else if (key === "exerciseVariationIndex") {
+        const [week, day] = normalizedIndexValues;
+        if ((week === "*" || week === this.bindings.week) && (day === "*" || day === this.bindings.day)) {
+          this.bindings.exerciseVariationIndex = result;
         }
       } else if (key === "descriptionIndex") {
         const [week, day] = normalizedIndexValues;
@@ -815,10 +914,12 @@ export class LiftoscriptEvaluator {
             variable === "RPE" ||
             variable === "minReps" ||
             variable === "timers" ||
+            variable === "setTime" ||
             variable === "logrpes" ||
             variable === "amraps" ||
             variable === "askweights" ||
             variable === "setVariationIndex" ||
+            variable === "exerciseVariationIndex" ||
             variable === "descriptionIndex" ||
             variable === "numberOfSets")
         ) {
@@ -834,7 +935,8 @@ export class LiftoscriptEvaluator {
             variable === "logrpes" ||
             variable === "askweights" ||
             variable === "minReps" ||
-            variable === "timers")
+            variable === "timers" ||
+            variable === "setTime")
         ) {
           return this.changeBinding(variable, expression, indexExprs, "=");
         } else {
@@ -943,7 +1045,9 @@ export class LiftoscriptEvaluator {
             variable === "RPE" ||
             variable === "minReps" ||
             variable === "timers" ||
+            variable === "setTime" ||
             variable === "setVariationIndex" ||
+            variable === "exerciseVariationIndex" ||
             variable === "descriptionIndex" ||
             variable === "numberOfSets")
         ) {
@@ -964,7 +1068,8 @@ export class LiftoscriptEvaluator {
             variable === "weights" ||
             variable === "RPE" ||
             variable === "minReps" ||
-            variable === "timers")
+            variable === "timers" ||
+            variable === "setTime")
         ) {
           const op = this.getValue(incAssignmentExpr);
           if (op !== "=" && op !== "+=" && op !== "-=" && op !== "*=" && op !== "/=") {
@@ -1047,12 +1152,16 @@ export class LiftoscriptEvaluator {
       if (keyword == null || keyword.type.name !== NodeName.Keyword) {
         assert(NodeName.BuiltinFunctionExpression);
       }
-      const name = this.getValue(keyword) as keyof typeof fns;
-      if (name != null && this.fns[name] != null) {
-        const argValues = args.map((a) => this.evaluate(a));
-        const fn = this.fns[name];
+      const name = this.getValue(keyword);
+      if (LiftoscriptFns_isFnName(name) && fns[name] != null) {
+        const argValues = args.map((a, index) => {
+          const value = this.evaluate(a);
+          this.validateFnArg(name, index, a, value);
+          return value;
+        });
+        const fn = fns[name];
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return (fn as any).apply(undefined, [...argValues, this.fnContext, this.bindings]);
+        return (fn as any)(argValues, this.fnContext, this.bindings);
       } else {
         this.error(`Unknown function '${name}'`, keyword);
       }
@@ -1157,18 +1266,20 @@ export class LiftoscriptEvaluator {
     return this.operation(this.bindings.rm1, one, two, (a, b) => a * b);
   }
 
+  // Division/modulo by zero returns 0 instead of NaN - NaN serializes to null in JSON
+  // and corrupts storage (fails schema validation on the server)
   private divide(
     one: IWeight | number | IPercentage,
     two: IWeight | number | IPercentage
   ): IWeight | number | IPercentage {
-    return this.operation(this.bindings.rm1, one, two, (a, b) => a / b);
+    return this.operation(this.bindings.rm1, one, two, (a, b) => (b === 0 ? 0 : a / b));
   }
 
   private modulo(
     one: IWeight | number | IPercentage,
     two: IWeight | number | IPercentage
   ): IWeight | number | IPercentage {
-    return this.operation(undefined, one, two, (a, b) => a % b);
+    return this.operation(undefined, one, two, (a, b) => (b === 0 ? 0 : a % b));
   }
 
   private operation(

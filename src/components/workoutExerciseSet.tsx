@@ -14,12 +14,14 @@ import {
   IPercentage,
 } from "../types";
 import { IconCheckCircle } from "./icons/iconCheckCircle";
+import { IconPlayCircle } from "./icons/iconPlayCircle";
 import { n } from "../utils/math";
+import { TimeUtils_formatMMSS } from "../utils/time";
 import { Tailwind_semantic } from "../utils/tailwindConfig";
 import { InputNumber2 } from "./inputNumber2";
 import { InputWeight2 } from "./inputWeight2";
 import { updateProgress } from "../models/state";
-import { LensBuilder } from "lens-shmens";
+import { LensBuilder, lb } from "lens-shmens";
 import {
   WorkoutExerciseUtils_getBorderColor100,
   WorkoutExerciseUtils_getBgColor50,
@@ -34,6 +36,7 @@ import { CollectionUtils_removeAt } from "../utils/collection";
 import { IPlannerProgramExercise } from "../pages/planner/models/types";
 import { IByExercise } from "../pages/planner/plannerEvaluator";
 import { EditProgressEntry_showEditSetModal } from "../models/editProgressEntry";
+import { useTrackClick } from "../utils/clickTracking";
 import { Reps_enforceCompletedSet, Reps_setsStatus, Reps_avgUnilateralCompletedReps } from "../models/set";
 import {
   Weight_eq,
@@ -110,6 +113,7 @@ interface IWorkoutExerciseSet {
 }
 
 function WorkoutExerciseSetInner(props: IWorkoutExerciseSet): JSX.Element {
+  const trackClick = useTrackClick();
   const set = props.set;
   const placeholderReps = `${set.minReps != null ? `${n(set.minReps)}-` : ""}${set.reps != null ? n(set.reps) : ""}${set.reps != null && set.isAmrap ? "+" : ""}`;
   const placeholderWeight = set.weight?.value != null ? `${n(set.weight.value)}${set.askWeight ? "+" : ""}` : undefined;
@@ -222,6 +226,28 @@ function WorkoutExerciseSetInner(props: IWorkoutExerciseSet): JSX.Element {
       isExternal: false,
     });
   }, [dispatch, setIndex, entryIndex, programExercise, otherStates, isPlayground, type, set.isCompleted]);
+  const onEditSetTimer = useCallback(() => {
+    trackClick("workout-set-timer-edit-open");
+    updateProgress(
+      dispatch,
+      [lb<IHistoryRecord>().pi("ui", {}).p("setTimerEditModal").record({ entryIndex, setIndex })],
+      "open-set-timer-edit"
+    );
+  }, [dispatch, entryIndex, setIndex, trackClick]);
+  const onOpenRoundingInfo = useCallback(() => {
+    trackClick("workout-rounding-info");
+    updateProgress(
+      dispatch,
+      [lb<IHistoryRecord>().pi("ui", {}).p("roundingModal").record({ entryIndex, setIndex })],
+      "open-rounding-info"
+    );
+  }, [dispatch, entryIndex, setIndex, trackClick]);
+  const isRoundedWeight =
+    props.type !== "warmup" &&
+    props.settings.workoutSettings.targetType === "target" &&
+    set.weight != null &&
+    set.originalWeight != null &&
+    !Weight_eq(set.weight, set.originalWeight);
 
   return (
     <SwipeableRow
@@ -258,7 +284,13 @@ function WorkoutExerciseSetInner(props: IWorkoutExerciseSet): JSX.Element {
               </View>
             </View>
 
-            <View className="flex-1" data-testid="workout-set-target" testID="workout-set-target">
+            <Pressable
+              className="flex-1"
+              data-testid="workout-set-target"
+              testID="workout-set-target"
+              disabled={!isRoundedWeight}
+              onPress={onOpenRoundingInfo}
+            >
               <WorkoutExerciseSetTargetField
                 set={set}
                 lastSet={props.lastSet}
@@ -271,8 +303,9 @@ function WorkoutExerciseSetInner(props: IWorkoutExerciseSet): JSX.Element {
                 }
                 settings={props.settings}
                 exerciseType={props.exerciseType}
+                underlineRounded={isRoundedWeight}
               />
-            </View>
+            </Pressable>
 
             <View className="items-center justify-center py-2" style={{ width: props.columnWidths.reps }}>
               {isUnilateral && (
@@ -352,7 +385,7 @@ function WorkoutExerciseSetInner(props: IWorkoutExerciseSet): JSX.Element {
             </View>
 
             {props.columnWidths.rpe > 0 ? (
-              <View className="items-start justify-center py-2 ml-1" style={{ width: props.columnWidths.rpe }}>
+              <View className="items-center justify-center py-2 ml-1" style={{ width: props.columnWidths.rpe }}>
                 {completedRpeValue != null ? (
                   <Text
                     numberOfLines={1}
@@ -363,22 +396,45 @@ function WorkoutExerciseSetInner(props: IWorkoutExerciseSet): JSX.Element {
                     @{n(completedRpeValue)}
                   </Text>
                 ) : null}
+                {set.completedSetTimer != null ? (
+                  <Pressable
+                    data-testid="set-timer-value"
+                    testID="set-timer-value"
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    onPress={props.type === "workout" ? onEditSetTimer : undefined}
+                  >
+                    <Text numberOfLines={1} className="text-xs font-semibold text-syntax-timer">
+                      {TimeUtils_formatMMSS(set.completedSetTimer * 1000)}
+                    </Text>
+                  </Pressable>
+                ) : null}
               </View>
             ) : null}
 
             <View className="items-end justify-center" style={{ width: props.columnWidths.check }}>
-              <Pressable
-                className={props.columnWidths.rpe > 0 ? "pl-1 pr-4 py-3" : "px-4 py-3"}
-                data-testid="complete-set"
-                testID="complete-set"
-                onPress={onCompleteSet}
-              >
-                <IconCheckCircle
-                  size={24}
-                  isChecked={true}
-                  color={WorkoutExerciseUtils_getIconColor([set], props.type === "warmup")}
-                />
-              </Pressable>
+              {props.type === "workout" && set.setTimer != null && !set.isCompleted ? (
+                <Pressable
+                  className={props.columnWidths.rpe > 0 ? "pl-1 pr-4 py-3" : "px-4 py-3"}
+                  data-testid="start-set-timer"
+                  testID="start-set-timer"
+                  onPress={onCompleteSet}
+                >
+                  <IconPlayCircle size={24} color={WorkoutExerciseUtils_getIconColor([set], false)} />
+                </Pressable>
+              ) : (
+                <Pressable
+                  className={props.columnWidths.rpe > 0 ? "pl-1 pr-4 py-3" : "px-4 py-3"}
+                  data-testid="complete-set"
+                  testID="complete-set"
+                  onPress={onCompleteSet}
+                >
+                  <IconCheckCircle
+                    size={24}
+                    isChecked={true}
+                    color={WorkoutExerciseUtils_getIconColor([set], props.type === "warmup")}
+                  />
+                </Pressable>
+              )}
             </View>
           </View>
 
@@ -398,6 +454,7 @@ function WorkoutExerciseSetInner(props: IWorkoutExerciseSet): JSX.Element {
                 data-testid="edit-set-target"
                 testID="edit-set-target"
                 onPress={() => {
+                  trackClick("workout-set-edit");
                   close();
                   EditProgressEntry_showEditSetModal(
                     props.dispatch,
@@ -420,6 +477,7 @@ function WorkoutExerciseSetInner(props: IWorkoutExerciseSet): JSX.Element {
               data-testid="delete-set"
               testID="delete-set"
               onPress={() => {
+                trackClick("workout-set-delete");
                 close();
                 updateProgress(
                   props.dispatch,
@@ -452,9 +510,10 @@ export const WorkoutExerciseSet = memo(WorkoutExerciseSetInner);
 interface IWorkoutExerciseSetTargetProps {
   setType: "program" | "warmup" | "adhoc";
   set: ISet;
+  underlineRounded?: boolean;
 }
 
-function WorkoutExerciseSetTarget(props: IWorkoutExerciseSetTargetProps): JSX.Element {
+export function WorkoutExerciseSetTarget(props: IWorkoutExerciseSetTargetProps): JSX.Element {
   const cls = StyledText_cls(useRem());
   switch (props.setType) {
     case "warmup": {
@@ -503,9 +562,10 @@ function WorkoutExerciseSetTarget(props: IWorkoutExerciseSetTargetProps): JSX.El
         }
       }
       if (aSet.weight && isDiffWeight) {
+        const underline = props.underlineRounded ? " underline" : "";
         builder.add(" ");
-        builder.add(n(aSet.weight.value), cls("font-semibold text-syntax-weight"));
-        builder.add(aSet.weight.unit, cls("text-xs text-syntax-weight"));
+        builder.add(n(aSet.weight.value), cls(`font-semibold text-syntax-weight${underline}`));
+        builder.add(aSet.weight.unit, cls(`text-xs text-syntax-weight${underline}`));
       }
       builder.add(
         `${aSet.originalWeight == null && aSet.askWeight ? " ?" : ""}${aSet.askWeight ? "+" : ""}${
@@ -513,9 +573,23 @@ function WorkoutExerciseSetTarget(props: IWorkoutExerciseSetTargetProps): JSX.El
         }${aSet.rpe && aSet.logRpe ? "+" : ""}`,
         cls("font-semibold text-syntax-rpe")
       );
-      if (aSet.timer != null) {
+      if (aSet.setTimer != null) {
+        const overflow = aSet.isOverflowSetTimer ? "+" : "";
+        builder.add(` ${n(Math.max(0, aSet.setTimer))}`, cls("font-semibold text-syntax-timer"));
+        builder.add("s", cls("text-xs text-syntax-timer"));
+        builder.add(`${overflow}|`, cls("font-semibold text-syntax-timer"));
+        if (aSet.timer != null) {
+          builder.add(`${n(Math.max(0, aSet.timer))}`, cls("font-semibold text-syntax-timer"));
+          builder.add("s", cls("text-xs text-syntax-timer"));
+        } else {
+          builder.add("?", cls("font-semibold text-syntax-timer"));
+        }
+      } else if (aSet.timer != null) {
         builder.add(` ${n(aSet.timer)}`, cls("text-syntax-timer"));
         builder.add("s", cls("text-xs text-syntax-timer"));
+      }
+      if (aSet.auto) {
+        builder.add(" auto", cls("text-syntax-auto"));
       }
       const built = builder.build();
       return (
@@ -628,12 +702,15 @@ interface IWorkoutExerciseSetTargetFieldProps {
   lastSet?: ISet;
   settings: ISettings;
   exerciseType: IExerciseType;
+  underlineRounded?: boolean;
 }
 
 function WorkoutExerciseSetTargetField(props: IWorkoutExerciseSetTargetFieldProps): JSX.Element {
   switch (props.settings.workoutSettings.targetType) {
     case "target": {
-      return <WorkoutExerciseSetTarget set={props.set} setType={props.setType} />;
+      return (
+        <WorkoutExerciseSetTarget set={props.set} setType={props.setType} underlineRounded={props.underlineRounded} />
+      );
     }
     case "lasttime": {
       return <WorkoutExerciseLastSet set={props.lastSet} />;

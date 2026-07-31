@@ -13,7 +13,7 @@ import { IconArrowDown2 } from "../icons/iconArrowDown2";
 import { ExercisePickerOptions, IFilterValue } from "./exercisePickerOptions";
 import { StringUtils_capitalize } from "../../utils/string";
 import { ObjectUtils_keys, ObjectUtils_clone, ObjectUtils_mapValues } from "../../utils/object";
-import { Exercise_targetMuscles, Exercise_synergistMuscles } from "../../models/exercise";
+import { Exercise_targetMuscles, Exercise_synergistMuscles, Exercise_nameError } from "../../models/exercise";
 import { AppContext } from "../appContext";
 import { Service } from "../../api/service";
 import { IconSpinner } from "../icons/iconSpinner";
@@ -76,7 +76,8 @@ export function ExercisePickerCustomExerciseContent(props: IExercisePickerCustom
     appContext.service ?? (typeof window !== "undefined" ? new Service(fetch.bind(window)) : new Service(fetch));
   const editCustomExercise = props.exercise;
   const { notes, setNotes } = props;
-  const isValid = editCustomExercise.name.trim().length ?? 0 > 0;
+  const nameError = Exercise_nameError(editCustomExercise.name);
+  const isValid = nameError == null;
   const [isAutofilling, setIsAutofilling] = useState<boolean>(false);
   const [showCloneBottomSheet, setShowCloneBottomSheet] = useState<boolean>(false);
   const [showImageBottomSheet, setShowImageBottomSheet] = useState<boolean>(false);
@@ -158,7 +159,7 @@ export function ExercisePickerCustomExerciseContent(props: IExercisePickerCustom
               props.dispatch(lb<ICustomExercise>().p("name").record(text), "Update custom exercise name");
             }}
           />
-          {!isValid && <Text className="mt-1 text-xs text-text-error">Name cannot be empty</Text>}
+          {nameError != null && <Text className="mt-1 text-xs text-text-error">{nameError}</Text>}
         </View>
         <View className="mt-4">
           {editCustomExercise.largeImageUrl || editCustomExercise.smallImageUrl ? (

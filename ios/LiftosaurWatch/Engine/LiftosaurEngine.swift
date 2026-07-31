@@ -101,13 +101,21 @@ class LiftosaurEngine {
         }
     }
 
+    // Polled every tick to drive `auto` set-timer transitions, so logging it would flood the engine log.
+    private static let quietCallMethods: Set<String> = ["isSetTimerCheckDue"]
+
+    private func logCall(_ method: String) {
+        if Self.quietCallMethods.contains(method) { return }
+        Logger.engine.info("JS call - \(method)")
+    }
+
     /// Execute JS and decode result.
     /// `globals` are set as JS global variables via C API (no escaping needed — for large strings like storage).
     /// `args` are already-formatted JS expression fragments (for small values like ints or short escaped strings).
     private func call<T: Codable>(_ method: String, globals: [(String, String)] = [], args: [String] = []) async -> Result<T, EngineError> {
         await runOnJSQueue {
             let argsStr = self.prepareArgs(globals: globals, args: args)
-            Logger.engine.info("JS call - \(method)")
+            self.logCall(method)
             return self.evalAndDecode("Liftosaur.\(method)(\(argsStr))")
         }
     }
@@ -116,7 +124,7 @@ class LiftosaurEngine {
     private func callOptional<T: Codable>(_ method: String, globals: [(String, String)] = [], args: [String] = []) async -> Result<T?, EngineError> {
         await runOnJSQueue {
             let argsStr = self.prepareArgs(globals: globals, args: args)
-            Logger.engine.info("JS call - \(method)")
+            self.logCall(method)
             return self.evalAndDecodeOptional("Liftosaur.\(method)(\(argsStr))")
         }
     }
@@ -125,7 +133,7 @@ class LiftosaurEngine {
     private func callMutation(_ method: String, globals: [(String, String)] = [], args: [String] = []) async -> Result<String, EngineError> {
         await runOnJSQueue {
             let argsStr = self.prepareArgs(globals: globals, args: args)
-            Logger.engine.info("JS call - \(method)")
+            self.logCall(method)
             return self.evalAndExtractStorage("Liftosaur.\(method)(\(argsStr))")
         }
     }
@@ -135,7 +143,7 @@ class LiftosaurEngine {
         await runOnJSQueue {
             guard let context = self.context else { return nil }
             let argsStr = self.prepareArgs(globals: globals, args: args)
-            Logger.engine.info("JS call - \(method)")
+            self.logCall(method)
             return context.eval("Liftosaur.\(method)(\(argsStr))").string
         }
     }
@@ -190,6 +198,14 @@ class LiftosaurEngine {
         await callMutation("completeSet", globals: [("__lft_s", storageJson)], args: [str(deviceId), "\(entryIndex)", "\(setIndex)"])
     }
 
+    func updateCompletedSetTimer(storageJson: String, deviceId: String, entryIndex: Int, setIndex: Int, seconds: Int) async -> Result<String, EngineError> {
+        await callMutation("updateCompletedSetTimer", globals: [("__lft_s", storageJson)], args: [str(deviceId), "\(entryIndex)", "\(setIndex)", "\(seconds)"])
+    }
+
+    func setCurrentEntryIndex(storageJson: String, deviceId: String, entryIndex: Int) async -> Result<String, EngineError> {
+        await callMutation("setCurrentEntryIndex", globals: [("__lft_s", storageJson)], args: [str(deviceId), "\(entryIndex)"])
+    }
+
     func getNextEntryAndSetIndex(storageJson: String, entryIndex: Int, setIndex: Int) async -> Result<WatchNextEntryAndSetIndex?, EngineError> {
         await callOptional("getNextEntryAndSetIndex", globals: [("__lft_s", storageJson)], args: ["\(entryIndex)", "\(setIndex)"])
     }
@@ -229,6 +245,28 @@ class LiftosaurEngine {
         let rpeArg = completedRpe.map { String($0) } ?? "undefined"
         let userVarsArg = userPromptedVarsJson.map { str($0) } ?? "undefined"
         return await callMutation("completeSetWithAmrap", globals: [("__lft_s", storageJson)], args: [str(deviceId), repsArg, repsLeftArg, weightArg, rpeArg, userVarsArg])
+    }
+
+    func getSetTimerModal(storageJson: String) async -> Result<WatchSetTimerModal?, EngineError> {
+        await callOptional("getSetTimerModal", globals: [("__lft_s", storageJson)])
+    }
+
+    func recordSetTimer(storageJson: String, deviceId: String, entryIndex: Int, setIndex: Int, keepTiming: Bool, recordedSeconds: Int) async -> Result<String, EngineError> {
+        await callMutation("recordSetTimer", globals: [("__lft_s", storageJson)], args: [str(deviceId), "\(entryIndex)", "\(setIndex)", keepTiming ? "true" : "false", "\(recordedSeconds)"])
+    }
+
+    func closeSetTimer(storageJson: String, deviceId: String) async -> Result<String, EngineError> {
+        await callMutation("closeSetTimer", globals: [("__lft_s", storageJson)], args: [str(deviceId)])
+    }
+
+    func isSetTimerCheckDue(storageJson: String) async -> Bool {
+        let result: Result<WatchSetTimerCheckDue, EngineError> = await call("isSetTimerCheckDue", globals: [("__lft_s", storageJson)])
+        guard case .success(let value) = result else { return false }
+        return value.due
+    }
+
+    func checkSetTimer(storageJson: String, deviceId: String) async -> Result<String, EngineError> {
+        await callMutation("checkSetTimer", globals: [("__lft_s", storageJson)], args: [str(deviceId)])
     }
 
     func getRestTimer(storageJson: String) async -> Result<WatchRestTimer?, EngineError> {

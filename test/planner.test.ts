@@ -10,7 +10,10 @@ import {
   PlannerTestUtils_finish,
   PlannerTestUtils_changeExercise,
   PlannerTestUtils_changeWeight,
+  PlannerTestUtils_get,
 } from "./utils/plannerTestUtils";
+import { Program_evaluate, Program_nextHistoryRecord, Program_runAllFinishDayScripts } from "../src/models/program";
+import { ProgramToPlanner } from "../src/models/programToPlanner";
 import { IPlannerProgram, ISettings, IStats, IUnit } from "../src/types";
 import { Settings_build, Settings_defaultEquipment } from "../src/models/settings";
 import { PlannerExerciseEvaluator, PlannerSyntaxError } from "../src/pages/planner/plannerExerciseEvaluator";
@@ -31,6 +34,68 @@ Squat / 2x5 / 105lb / progress: lp(5lb)
 
 
 `);
+  });
+
+  it("keeps 'used: none' templates with repeat ranges in place on finish", () => {
+    const programText = `# Week 1
+## Day 1
+base / used: none / 2x5 / progress: custom(increment: 5lb) {~
+  weights += state.increment
+~}
+tpl[1-2] / used: none / 2x8 / progress: custom(increment: 2.5lb) { ...base }
+Bench Press[1] / ...tpl / 100lb
+Squat[2] / ...tpl / 200lb
+
+# Week 2
+## Day 1
+Bench Press[1] / ...tpl / 110lb
+Squat[2] / ...tpl / 210lb`;
+    const { program } = PlannerTestUtils_finish(programText, {
+      completedReps: [
+        [8, 8],
+        [8, 8],
+      ],
+    });
+    const newText = PlannerProgram_generateFullText(program.planner!.weeks);
+    expect(newText).to.equal(`# Week 1
+## Day 1
+base / used: none / 2x5 / progress: custom(increment: 5lb) {~
+  weights += state.increment
+~}
+tpl[1-2] / used: none / 2x8 / progress: custom(increment: 2.5lb) { ...base }
+Bench Press[1] / ...tpl / 102.5lb
+Squat[2] / ...tpl / 202.5lb
+
+
+# Week 2
+## Day 1
+Bench Press[1] / ...tpl / 112.5lb
+Squat[2] / ...tpl / 212.5lb
+
+
+`);
+  });
+
+  it("evaluates progress reuse chains regardless of exercise order", () => {
+    const programText = `# Week 1
+## Day 1
+base / used: none / 2x5 / progress: custom(increment: 5lb) {~
+  weights += state.increment
+~}
+Bench Press / ...tpl / 100lb
+tpl[1-2] / used: none / 2x8 / progress: custom(increment: 2.5lb) { ...base }
+
+# Week 2
+## Day 1
+Bench Press / ...tpl / 110lb`;
+    const planner: IPlannerProgram = {
+      vtype: "planner",
+      name: "MyProgram",
+      weeks: PlannerProgram_evaluateText(programText),
+    };
+    const evaluatedWeeks = PlannerProgram_evaluate(planner, Settings_build()).evaluatedWeeks;
+    const errors = evaluatedWeeks.flat().flatMap((day) => (day.success ? [] : [day.error.message]));
+    expect(errors).to.eql([]);
   });
 
   it("updates empty weight after completing", () => {
@@ -1032,6 +1097,92 @@ Bench Press[1-5] / ...tmp: Squat / progress: custom() { ...tmp: Squat }
     });
   });
 
+  it("shows a positioned syntax error when passing an array to a scalar function in a progress script", () => {
+    const programText = `# Week 1
+## Day 1
+Squat / 2x8+ / 100lb / progress: custom(reps: 24) {~
+  if (sum(completedReps) >= state.reps) {
+    weights = increment(weights)
+  }
+~}`;
+    const planner: IPlannerProgram = {
+      vtype: "planner",
+      name: "MyProgram",
+      weeks: PlannerProgram_evaluateText(programText),
+    };
+    const result = PlannerProgram_evaluate(planner, Settings_build()).evaluatedWeeks[0][0];
+    expect(result).to.deep.equal({
+      success: false,
+      error: new PlannerSyntaxError(
+        "Function 'increment' doesn't accept arrays, and 'weights' is an array. Use an index to pick one value, like 'weights[1]' (3:24)",
+        0,
+        0,
+        0,
+        0
+      ),
+    });
+  });
+
+  it("shows a positioned syntax error on wrong number of function arguments in a progress script", () => {
+    const programText = `# Week 1
+## Day 1
+Squat / 2x8+ / 100lb / progress: custom(foo: 0) {~
+  state.foo = rpeMultiplier()
+~}`;
+    const planner: IPlannerProgram = {
+      vtype: "planner",
+      name: "MyProgram",
+      weeks: PlannerProgram_evaluateText(programText),
+    };
+    const result = PlannerProgram_evaluate(planner, Settings_build()).evaluatedWeeks[0][0];
+    expect(result).to.deep.equal({
+      success: false,
+      error: new PlannerSyntaxError("Function 'rpeMultiplier' expects 1-2 arguments, but got 0 (2:14)", 0, 0, 0, 0),
+    });
+  });
+
+  it("shows a positioned syntax error on a statically known wrong argument type in a progress script", () => {
+    const programText = `# Week 1
+## Day 1
+Squat / 2x8+ / 100lb / progress: custom(foo: 0) {~
+  state.foo = calculateTrainingMax(100lb, 5lb)
+~}`;
+    const planner: IPlannerProgram = {
+      vtype: "planner",
+      name: "MyProgram",
+      weeks: PlannerProgram_evaluateText(programText),
+    };
+    const result = PlannerProgram_evaluate(planner, Settings_build()).evaluatedWeeks[0][0];
+    expect(result).to.deep.equal({
+      success: false,
+      error: new PlannerSyntaxError(
+        "Argument 2 (reps) of 'calculateTrainingMax' should be a number of reps, but '5lb' is a weight (2:42)",
+        0,
+        0,
+        0,
+        0
+      ),
+    });
+  });
+
+  it("shows a positioned syntax error on wrong number of 'sets' arguments in an update script", () => {
+    const programText = `# Week 1
+## Day 1
+Squat / 2x8+ / 100lb / update: custom() {~
+  sets(1, 3, 5, 5, 0, 100lb, 60, 0)
+~}`;
+    const planner: IPlannerProgram = {
+      vtype: "planner",
+      name: "MyProgram",
+      weeks: PlannerProgram_evaluateText(programText),
+    };
+    const result = PlannerProgram_evaluate(planner, Settings_build()).evaluatedWeeks[0][0];
+    expect(result).to.deep.equal({
+      success: false,
+      error: new PlannerSyntaxError("Function 'sets' expects 9 arguments, but got 8 (2:2)", 0, 0, 0, 0),
+    });
+  });
+
   it("preserves order of exercises", () => {
     const programText = `# Week 1
 ## Day 1
@@ -1901,5 +2052,283 @@ Bench Press / 1x1
 
 
 `);
+  });
+
+  describe("Set timers", () => {
+    it("parses setTimer|restTimer, overflow + and auto into evaluated sets", () => {
+      const programText = `# Week 1
+## Day 1
+Plank / 3x1 60s|30s auto
+Squat / 8x1+ 20s|10s auto
+Bench Press / 1x100 0s+|?
+Push Up / 3x10 30s`;
+      const planner: IPlannerProgram = { vtype: "planner", name: "P", weeks: PlannerProgram_evaluateText(programText) };
+      const day = PlannerProgram_evaluate(planner, Settings_build()).evaluatedWeeks[0][0];
+      expect(day.success).to.equal(true);
+      if (!day.success) {
+        return;
+      }
+      const [plank, squat, bench, pushup] = day.data.map((ex) => ex.evaluatedSetVariations[0].sets[0]);
+      expect({ setTimer: plank.setTimer, timer: plank.timer, auto: plank.auto, ovf: plank.isOverflowSetTimer }).to.eql({
+        setTimer: 60,
+        timer: 30,
+        auto: true,
+        ovf: undefined,
+      });
+      expect({ setTimer: squat.setTimer, timer: squat.timer, auto: squat.auto }).to.eql({
+        setTimer: 20,
+        timer: 10,
+        auto: true,
+      });
+      // 0s+|? — count-up stopwatch, "?" rest falls back to the default (undefined) rest timer
+      expect({ setTimer: bench.setTimer, ovf: bench.isOverflowSetTimer, timer: bench.timer }).to.eql({
+        setTimer: 0,
+        ovf: true,
+        timer: undefined,
+      });
+      // Bare "30s" stays a rest-only timer (backwards compatible), no set timer
+      expect({ setTimer: pushup.setTimer, timer: pushup.timer }).to.eql({ setTimer: undefined, timer: 30 });
+    });
+
+    it("round-trips set timer syntax through serialization", () => {
+      const programText = `# Week 1
+## Day 1
+Squat / 5x5 135lb 60s|0s auto / progress: lp(5lb)
+Plank / 3x1 20s+|?
+Bench Press / 1x100 0s+|? auto`;
+      const { program } = PlannerTestUtils_finish(programText, {
+        completedReps: [[5, 5, 5, 5, 5], [1, 1, 1], [100]],
+      });
+      const newText = PlannerProgram_generateFullText(program.planner!.weeks);
+      expect(newText).to.equal(`# Week 1
+## Day 1
+Squat / 5x5 60s|0s auto / 140lb / progress: lp(5lb)
+Plank / 3x1 20s+|?
+Bench Press / 1x100 0s+|? auto
+
+
+`);
+    });
+
+    describe("global and reuse override combinations", () => {
+      const cases: {
+        name: string;
+        text: string;
+        expected: { st?: number; rest?: number; ovf?: boolean; auto?: boolean }[];
+      }[] = [
+        {
+          name: "? rest falls back to the exercise's global rest section",
+          text: "Squat / 3x8 60s|? / 30s",
+          expected: [{ st: 60, rest: 30 }],
+        },
+        {
+          name: "? rest with no global stays unset (app default at runtime)",
+          text: "Squat / 3x8 60s|?",
+          expected: [{ st: 60 }],
+        },
+        {
+          name: "global set-timer section applies to every set and group",
+          text: "Squat / 3x8, 2x5 / 60s|30s",
+          expected: [{ st: 60, rest: 30, ovf: false }],
+        },
+        {
+          name: "global + section makes all sets overflow",
+          text: "Squat / 3x8 / 60s+|30s",
+          expected: [{ st: 60, rest: 30, ovf: true }],
+        },
+        {
+          name: "reuse carries set timer, rest and auto",
+          text: "Squat / 3x8 60s|30s auto\nBench Press / ...Squat",
+          expected: [
+            { st: 60, rest: 30, auto: true },
+            { st: 60, rest: 30, auto: true },
+          ],
+        },
+        {
+          name: "reuse with rest-only override keeps the reused set timer",
+          text: "Squat / 3x8 60s|10s\nBench Press / ...Squat / 45s",
+          expected: [
+            { st: 60, rest: 10 },
+            { st: 60, rest: 45 },
+          ],
+        },
+        {
+          name: "reuse with set-timer override resets the + modifier",
+          text: "Squat / 3x8 60s+|10s auto\nBench Press / ...Squat / 30s|45s",
+          expected: [
+            { st: 60, rest: 10, ovf: true, auto: true },
+            { st: 30, rest: 45, ovf: false, auto: true },
+          ],
+        },
+        {
+          name: "reuse with set-timer override keeps + when restated",
+          text: "Squat / 3x8 60s+|10s auto\nBench Press / ...Squat / 30s+|45s",
+          expected: [
+            { st: 60, rest: 10, ovf: true, auto: true },
+            { st: 30, rest: 45, ovf: true, auto: true },
+          ],
+        },
+        {
+          name: "reuse of a global-set-timer source carries the +",
+          text: "Squat / 3x8 / 60s+|30s\nBench Press / ...Squat",
+          expected: [
+            { st: 60, rest: 30, ovf: true },
+            { st: 60, rest: 30, ovf: true },
+          ],
+        },
+        {
+          name: "reuse override of set timer with ? rest inherits the reused rest",
+          text: "Squat / 3x8 60s|10s\nBench Press / ...Squat / 30s|?",
+          expected: [
+            { st: 60, rest: 10 },
+            { st: 30, rest: 10, ovf: false },
+          ],
+        },
+      ];
+      for (const c of cases) {
+        it(c.name, () => {
+          const planner: IPlannerProgram = {
+            vtype: "planner",
+            name: "P",
+            weeks: PlannerProgram_evaluateText(`# Week 1\n## Day 1\n${c.text}\n`),
+          };
+          const day = PlannerProgram_evaluate(planner, Settings_build()).evaluatedWeeks[0][0];
+          expect(day.success).to.equal(true);
+          if (!day.success) {
+            return;
+          }
+          expect(day.data.length).to.equal(c.expected.length);
+          day.data.forEach((ex, exIndex) => {
+            const exp = { st: undefined, rest: undefined, ovf: undefined, auto: undefined, ...c.expected[exIndex] };
+            // Every set within the exercise should resolve to the same expected timer tuple
+            for (const s of ex.evaluatedSetVariations[0].sets) {
+              expect({ st: s.setTimer, rest: s.timer, ovf: s.isOverflowSetTimer, auto: s.auto }).to.eql(exp);
+            }
+          });
+        });
+      }
+
+      it("round-trips a reuse with a set timer override", () => {
+        const text = `# Week 1
+## Day 1
+Squat / 3x8 60s+|10s auto
+Bench Press / ...Squat / 30s|45s`;
+        const { program } = PlannerTestUtils_get(text);
+        const evaluated = Program_evaluate(program, Settings_build());
+        const result = new ProgramToPlanner(evaluated, Settings_build()).convertToPlanner();
+        expect(result.weeks[0].days[0].exerciseText).to.equal(
+          `Squat / 3x8 60s+|10s auto\nBench Press / ...Squat / 30s|45s`
+        );
+      });
+    });
+
+    it("exposes setTime as an assignable variable in progress scripts", () => {
+      const programText = `# Week 1
+## Day 1
+Plank / 1x1 30s|60s / progress: custom() {~
+  setTime[1] += 5
+~}`;
+      const { program } = PlannerTestUtils_finish(programText, { completedReps: [[1]] });
+      const newText = PlannerProgram_generateFullText(program.planner!.weeks);
+      expect(newText).to.equal(`# Week 1
+## Day 1
+Plank / 1x1 35s|60s / progress: custom() {~
+  setTime[1] += 5
+~}
+
+
+`);
+    });
+
+    it("moves a uniform setTime change back into a global override on a reuse line", () => {
+      const programText = `# Week 1
+## Day 1
+plank_progression / used: none / 2x1 / 70s|90s 0lb / progress: custom(completions: 1) {~
+  setTime = 80
+~}
+
+Plank / ...plank_progression`;
+      const { program } = PlannerTestUtils_finish(programText, { completedReps: [[1, 1]] });
+      const newText = PlannerProgram_generateFullText(program.planner!.weeks);
+      expect(newText).to.equal(`# Week 1
+## Day 1
+plank_progression / used: none / 2x1 / 0lb 70s|90s / progress: custom(completions: 1) {~
+  setTime = 80
+~}
+
+Plank / ...plank_progression / 80s|90s
+
+
+`);
+    });
+
+    it("dereuses sets when setTime changes on an exercise with reused sets", () => {
+      const programText = `# Week 1
+## Day 1
+plank_progression / used: none / 1x1 70s|90s, 1x1 60s+|90s / 0lb / progress: custom(completions: 1) {~
+  setTime[2] = 70
+~}
+
+Plank / ...plank_progression / progress: custom(completions: 0) { ...plank_progression }`;
+      const { program } = PlannerTestUtils_finish(programText, { completedReps: [[1, 1]] });
+      const newText = PlannerProgram_generateFullText(program.planner!.weeks);
+      expect(newText).to.equal(`# Week 1
+## Day 1
+plank_progression / used: none / 1x1 70s|90s, 1x1 60s+|90s / 0lb / progress: custom(completions: 1) {~
+  setTime[2] = 70
+~}
+
+Plank / ...plank_progression / 1x1 70s|90s, 1x1 70s+|90s / progress: custom(completions: 0) { ...plank_progression }
+
+
+`);
+    });
+
+    it("exposes completedSetTime to progress scripts", () => {
+      const programText = `# Week 1
+## Day 1
+Plank / 1x1 30s+|60s / progress: custom() {~
+  setTime[1] = completedSetTime[1] + 5
+~}`;
+      const { program } = PlannerTestUtils_get(programText);
+      const settings = Settings_build();
+      const record = Program_nextHistoryRecord(program, settings, Stats_getEmpty());
+      const set = record.entries[0].sets[0];
+      set.completedReps = 1;
+      set.completedSetTimer = 45;
+      set.isCompleted = true;
+      const { program: newProgram } = Program_runAllFinishDayScripts(program, record, Stats_getEmpty(), settings);
+      const newText = PlannerProgram_generateFullText(newProgram.planner!.weeks);
+      expect(newText).to.equal(`# Week 1
+## Day 1
+Plank / 1x1 50s+|60s / progress: custom() {~
+  setTime[1] = completedSetTime[1] + 5
+~}
+
+
+`);
+    });
+
+    it("removes sets (not zeroes them out) when update reduces numberOfSets", () => {
+      const programText = `# Week 1
+## Day 1
+Squat[1-3] / ...customLogic / 3x5-10 / 200lb
+
+# Week 2
+## Day 1
+
+
+# Week 3
+## Day 1
+customLogic[1-3] / used: none / 2x5-30 / 5lb / warmup: none / update: custom() {~
+  if (week == 1) {
+    numberOfSets = 2
+  }
+~}`;
+      const { program } = PlannerTestUtils_get(programText);
+      const settings = Settings_build();
+      const record = Program_nextHistoryRecord(program, settings, Stats_getEmpty());
+      expect(record.entries[0].sets.length).to.equal(2);
+    });
   });
 });

@@ -61,8 +61,8 @@ export function ScreenSetupEquipment(props: IScreenSetupEquipmentProps): JSX.Ele
   useNavOptions({ navHidden: true });
 
   return (
-    <View className="flex flex-col flex-1 h-screen bg-background-default" style={{ paddingTop: insets.top }}>
-      <ScrollView className="flex-1 px-4 pt-8 pb-4">
+    <View className="flex flex-col flex-1 bg-background-default" style={{ paddingTop: insets.top }}>
+      <ScrollView className="flex-1" contentContainerClassName="px-4 pt-8 pb-4">
         <View className="items-center p-4">
           <Image
             source={{ uri: ImagePreloader_uri("/images/dinoequipment.png") }}
@@ -144,18 +144,18 @@ export function ScreenSetupEquipment(props: IScreenSetupEquipmentProps): JSX.Ele
       <View className="bg-background-default" style={[{ paddingBottom: insets.bottom || 8 }, getFooterShadowStyle()]}>
         <View className="flex-row px-4 pt-2 pb-2" style={{ gap: 8 }}>
           <Button
-            className="flex-1"
+            className="flex-1 ls-onboarding-equipment-skip"
             name="setup-equipment-skip"
             kind="lightgrayv3"
             buttonSize="lg"
             data-testid="setup-equipment-skip"
             testID="setup-equipment-skip"
-            onClick={() => props.dispatch(Thunk_pushScreen("programselect"))}
+            onClick={() => props.dispatch(Thunk_pushScreen("hearaboutus"))}
           >
             Skip
           </Button>
           <Button
-            className="flex-1"
+            className="flex-1 ls-onboarding-equipment-setup"
             name="setup-equipment-continue"
             kind="purple"
             buttonSize="lg"
@@ -310,11 +310,11 @@ export function ScreenSetupPlates(props: IScreenSetupPlatesProps): JSX.Element {
         style={[{ paddingBottom: insets.bottom || 16 }, getFooterShadowStyle()]}
       >
         <Button
-          className="w-full"
+          className="w-full ls-onboarding-plates"
           name="setup-plates-continue"
           kind="purple"
           buttonSize="lg"
-          onClick={() => props.dispatch(Thunk_pushScreen("programselect"))}
+          onClick={() => props.dispatch(Thunk_pushScreen("hearaboutus"))}
           data-testid="setup-plates-continue"
           testID="setup-plates-continue"
         >
