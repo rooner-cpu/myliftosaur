@@ -52,3 +52,4 @@ function IconMeSelected(props: IInnerProps): JSX.Element {
     </Svg>
   );
 }
+

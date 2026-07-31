@@ -21,3 +21,4 @@ export function useTrackClick(): (name: string, className?: string) => void {
     [dispatch]
   );
 }
+

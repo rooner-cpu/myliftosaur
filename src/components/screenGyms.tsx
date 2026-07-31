@@ -133,3 +133,4 @@ export function ScreenGyms(props: IProps): JSX.Element {
     </View>
   );
 }
+

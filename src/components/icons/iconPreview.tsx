@@ -30,3 +30,4 @@ export function IconPreview(props: IProps): JSX.Element {
     </svg>
   );
 }
+

@@ -21,3 +21,4 @@ export function Switch(props: ISwitchProps): JSX.Element {
     />
   );
 }
+

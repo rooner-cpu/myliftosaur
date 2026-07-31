@@ -7,6 +7,8 @@ const URLConstructor: typeof URL = typeof URL !== "undefined" ? URL : (URLPolyfi
 export function UrlUtils_build(url: string, base?: string | URL): URL {
   if (base != null) {
     base = base.toString().replace("liftosaur://", "https://");
+  } else if (url.startsWith("/") && typeof window !== "undefined" && window.location?.origin) {
+    base = window.location.origin;
   }
   try {
     return new URLConstructor(url, base);

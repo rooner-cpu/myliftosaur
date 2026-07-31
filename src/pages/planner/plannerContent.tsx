@@ -360,14 +360,14 @@ export function PlannerContent(props: IPlannerContentProps): JSX.Element {
               , percentage of{" "}
               <abbr title="1RM - One Rep Max. The maximum weight you can lift for one repetition.">1RM</abbr>, rest
               timers, various progressive overload types, etc. Read more about the features{" "}
-              <a target="_blank" className="font-bold underline text-text-link" href="https://www.liftosaur.com/doc/">
+              <a target="_blank" className="font-bold underline text-text-link" href="/doc/">
                 in the docs
               </a>
               !
             </p>
             <p className="mb-2">
-              When you're done, you can convert this program to Liftosaur program, and run what you planned in the gym,
-              using the <strong>Liftosaur app</strong>!
+              When you're done, you can convert this program to VMR-Lift program, and run what you planned in the gym,
+              using the <strong>VMR-Lift app</strong>!
             </p>
           </div>
           <button
@@ -437,7 +437,7 @@ export function PlannerContent(props: IPlannerContentProps): JSX.Element {
                   lb<IPlannerState>().p("current").p("program").p("name").record(v),
                   "Update current program name"
                 );
-                document.title = `Liftosaur: Weight Lifting Tracking App | ${HtmlUtils_escapeHtml(v)}`;
+                document.title = `VMR-Lift: Weight Lifting Tracking App | ${HtmlUtils_escapeHtml(v)}`;
               }}
             />
           </h2>
@@ -857,3 +857,5 @@ export function PlannerContent(props: IPlannerContentProps): JSX.Element {
     </section>
   );
 }
+
+

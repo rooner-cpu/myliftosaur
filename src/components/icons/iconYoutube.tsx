@@ -24,3 +24,4 @@ export function IconYoutube(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

@@ -20,3 +20,4 @@ export function IconExternalLink(props: IIconExternalLinkProps): JSX.Element {
     </Svg>
   );
 }
+

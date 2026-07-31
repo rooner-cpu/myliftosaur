@@ -1,5 +1,8 @@
 import { IExerciseType, ISettings } from "../types";
 import { Exercise_toUrlSlug } from "./exercise";
+
+declare const __EXERCISE_IMAGE_HOST__: string;
+
 const availableSmallImages = new Set([
   "abwheel_bodyweight",
   "arnoldpress_dumbbell",
@@ -772,7 +775,7 @@ export function ExerciseImageUtils_url(
       size === "large"
         ? `/externalimages/exercises/full/large/${ExerciseImageUtils_id(type)}_full_large.png`
         : `/externalimages/exercises/single/small/${ExerciseImageUtils_id(type)}_single_small.png`;
-    return src;
+    return `${__EXERCISE_IMAGE_HOST__}${src}`;
   } else if (ExerciseImageUtils_existsCustom(type, size, false, settings)) {
     const customExercise = settings?.exercises?.[type.id];
     return size === "large"

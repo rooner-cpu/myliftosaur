@@ -120,3 +120,4 @@ function fallbackReadTextFromClipboard(): string | undefined {
   document.body.removeChild(contentEditableElement);
   return result;
 }
+

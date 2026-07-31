@@ -67,3 +67,4 @@ export function NavModalExerciseMusclesPicker(): JSX.Element {
     </SheetScreenContainer>
   );
 }
+

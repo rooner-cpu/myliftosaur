@@ -9,13 +9,13 @@ interface IProps {
 
 export function AllExercisesHtml(props: IProps): JSX.Element {
   const { client, isLoggedIn, ...data } = props;
-  const title = `All exercises | Liftosaur`;
-  const url = `https://www.liftosaur.com/exercises`;
+  const title = `All exercises | VMR-Lift`;
+  const url = `http://myliftosaur.local:8081/exercises`;
 
   const jsonLd: IJsonLd[] = [
     {
       type: "BreadcrumbList",
-      items: [{ name: "Home", url: "https://www.liftosaur.com" }, { name: "Exercises" }],
+      items: [{ name: "Home", url: "http://myliftosaur.local:8081" }, { name: "Exercises" }],
     },
   ];
 
@@ -38,3 +38,4 @@ export function AllExercisesHtml(props: IProps): JSX.Element {
     </Page>
   );
 }
+

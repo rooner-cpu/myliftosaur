@@ -1,0 +1,32 @@
+<i> [webpack-dev-server] [HPM] Proxy created: /api  -> https://localhost:7240
+<i> [webpack-dev-server] Project is running at:
+<i> [webpack-dev-server] Loopback: [36mhttp://localhost:8081/[39m
+<i> [webpack-dev-server] On Your Network (IPv4): [36mhttp://192.168.0.195:8081/[39m
+<i> [webpack-dev-server] Content not from webpack is served from '[36mC:\Projects\VMR-Lift\VMR-Lift\dist[39m' directory
+<i> [webpack-dev-middleware] wait until bundle finished: /api/account/me
+(node:26520) [DEP_WEBPACK_COMPILATION_ASSETS] DeprecationWarning: Compilation.assets will be frozen in future, all modifications are deprecated.
+BREAKING CHANGE: No more changes should happen to Compilation.assets after sealing the Compilation.
+	Do changes to assets earlier, e. g. in Compilation.hooks.processAssets.
+	Make sure to select an appropriate stage from Compilation.PROCESS_ASSETS_STAGE_*.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:26520) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+<e> [webpack-dev-server] [HPM] ECONNRESET: Error: socket hang up
+<e>     at TLSSocket.socketOnEnd (node:_http_client:617:25)
+<e>     at TLSSocket.emit (node:events:521:24)
+<e>     at endReadableNT (node:internal/streams/readable:1729:12)
+<e>     at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+<e>   code: 'ECONNRESET'
+<e> }
+<i> [webpack-dev-middleware] wait until bundle finished: /app.css?version=xxxxxxxx
+<i> [webpack-dev-middleware] wait until bundle finished: /images/front-muscles.svg
+<i> [webpack-dev-middleware] wait until bundle finished: /vendors.js?vendor=xxxxxxxx
+<i> [webpack-dev-middleware] wait until bundle finished: /app.js?version=xxxxxxxx
+<i> [webpack-dev-middleware] wait until bundle finished: /manifest.webmanifest
+<i> [webpack-dev-middleware] wait until bundle finished: /images/back-muscles.svg
+<i> [webpack-dev-middleware] wait until bundle finished: /images/svgs/muscles-combined.svg
+<i> [webpack-dev-middleware] wait until bundle finished: /images/svgs/musclegroups-combined.svg
+<i> [webpack-dev-middleware] wait until bundle finished: /consent.js?version=xxxxxxxx
+<i> [webpack-dev-middleware] wait until bundle finished: /notification.m4r
+<i> [webpack-dev-middleware] wait until bundle finished: /api/account/me
+<e> [webpack-dev-server] [HPM] Error occurred while proxying request vmr-lift.local:8081/api/account/me to https://localhost:7240/ [ECONNREFUSED] (https://nodejs.org/api/errors.html#errors_common_system_errors)
+<e> [webpack-dev-server] [HPM] Error occurred while proxying request vmr-lift.local:8081/api/geo to https://localhost:7240/ [ECONNREFUSED] (https://nodejs.org/api/errors.html#errors_common_system_errors)

@@ -34,3 +34,4 @@ export function IconMuscles2(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

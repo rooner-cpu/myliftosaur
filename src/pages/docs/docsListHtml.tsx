@@ -11,15 +11,15 @@ interface IProps {
 
 export function DocsListHtml(props: IProps): JSX.Element {
   const { client, isLoggedIn, ...data } = props;
-  const title = "Documentation - Liftosaur";
-  const url = "https://www.liftosaur.com/doc";
+  const title = "Documentation - VMR-Lift";
+  const url = "http://myliftosaur.local:8081/doc";
   const description =
-    "Liftosaur documentation - learn how to use the app, create workout programs, and write Liftoscript.";
+    "VMR-Lift documentation - learn how to use the app, create workout programs, and write Liftoscript.";
 
   const jsonLd: IJsonLd[] = [
     {
       type: "BreadcrumbList",
-      items: [{ name: "Home", url: "https://www.liftosaur.com" }, { name: "Documentation" }],
+      items: [{ name: "Home", url: "http://myliftosaur.local:8081" }, { name: "Documentation" }],
     },
   ];
 
@@ -43,3 +43,4 @@ export function DocsListHtml(props: IProps): JSX.Element {
     </Page>
   );
 }
+

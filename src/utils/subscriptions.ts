@@ -1,4 +1,5 @@
 import { Service } from "../api/service";
+import { Standalone_localMode } from "../config/standalone";
 import { IDispatch } from "../ducks/types";
 import { IState, updateState } from "../models/state";
 import { lb } from "lens-shmens";
@@ -9,6 +10,9 @@ import { SubscriptionReceipts_cleanupApple } from "./subscriptionReceipts";
 import { Thunk_postevent } from "../ducks/thunks";
 
 export function Subscriptions_hasSubscription(subscription: ISubscription): boolean {
+  if (Standalone_localMode) {
+    return true;
+  }
   if (subscription.key && subscription.key !== "unclaimed") {
     return true;
   }

@@ -377,3 +377,4 @@ Deadlift / 1x1 @8, 1x3 @9 / 300s
 paused: Bench Press / 1x1 @8, 1x3 @9 / 240s
 beltless: Squat / 1x6 @6, 1x6 @7, 2x6 @8 / 240s
 ```
+

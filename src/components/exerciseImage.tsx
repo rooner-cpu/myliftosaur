@@ -189,3 +189,4 @@ function ExerciseNoImage(props: INoImageProps): JSX.Element | null {
     </View>
   );
 }
+

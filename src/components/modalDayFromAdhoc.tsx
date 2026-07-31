@@ -70,3 +70,4 @@ export function ModalDayFromAdhocContent(props: IModalDayFromAdhocContentProps):
     </>
   );
 }
+

@@ -273,3 +273,4 @@ const ExerciseHistoryRecord = memo((props: IExerciseHistoryRecordProps): JSX.Ele
     </MenuItemWrapper>
   );
 });
+

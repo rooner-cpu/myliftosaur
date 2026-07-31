@@ -55,3 +55,4 @@ export function NavModalPhotoPicker(): JSX.Element {
     </SheetScreenContainer>
   );
 }
+

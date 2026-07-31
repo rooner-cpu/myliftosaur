@@ -15,3 +15,4 @@ export function BottomSheetOrModal(props: IProps): JSX.Element {
   const appContext = useContext(AppContext);
   return appContext.isApp ? <BottomSheet {...props} /> : <Modal {...props} />;
 }
+

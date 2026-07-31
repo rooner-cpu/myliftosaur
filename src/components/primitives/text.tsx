@@ -49,3 +49,4 @@ export function Text({
   const testID = props.testID || dataTestid;
   return <RNText className={effectiveClassName} style={[{ fontFamily }, style]} {...props} testID={testID} />;
 }
+

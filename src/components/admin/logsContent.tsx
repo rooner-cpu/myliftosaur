@@ -82,3 +82,4 @@ export function LogsContent(props: ILogsContentProps): JSX.Element {
     </div>
   );
 }
+

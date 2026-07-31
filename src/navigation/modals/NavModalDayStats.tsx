@@ -65,3 +65,4 @@ export function NavModalDayStats(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

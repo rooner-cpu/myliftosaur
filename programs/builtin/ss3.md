@@ -211,3 +211,4 @@ Squat / 3x5 / 45lb
 Bench Press / 3x5 / 45lb
 Chin Up / 3x10 / 0lb
 ```
+

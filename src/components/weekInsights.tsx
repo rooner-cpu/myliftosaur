@@ -285,3 +285,4 @@ export function WeekInsightsDetails(props: IWeekInsightsDetailsProps): JSX.Eleme
     </View>
   );
 }
+

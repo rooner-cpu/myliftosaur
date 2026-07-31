@@ -20,3 +20,4 @@ export function IconAi(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

@@ -1,0 +1,222 @@
+
+> vmrlift@1.0.0 start:vmr
+> cross-env VMR_STANDALONE=1 VMR_API_URL=https://localhost:7240 npm start
+
+
+> vmrlift@1.0.0 start
+> npm run build:theme && npm run build:markdown && npm run build:programs && npm run build:exercises && webpack-dev-server
+
+
+> vmrlift@1.0.0 build:theme
+> node scripts/generate-theme-css.js
+
+Wrote C:\Projects\VMR-Lift\VMR-Lift\theme.generated.css (14456 bytes)
+Wrote C:\Projects\VMR-Lift\VMR-Lift\uniwind-types.d.ts (248 bytes)
+
+> vmrlift@1.0.0 build:markdown
+> node scripts/build-markdown.js
+
+✓ Generated ./src/generated/liftoscriptDoc.ts
+✓ Generated ./src/generated/liftoscriptExamples.ts
+✓ Generated ./src/generated/exercises.ts
+✓ Generated ./src/generated/whatsnew.ts
+✓ Generated ./src/generated/plannerGrammar.ts
+✓ Generated ./src/generated/liftoscriptGrammar.ts
+Build complete!
+
+> vmrlift@1.0.0 build:programs
+> cross-env TS_NODE_TRANSPILE_ONLY=1 ts-node scripts/build-programs.ts
+
+  ✓ arnold-split
+  ✓ arnoldgoldensix
+  ✓ barbell-medicine-the-bridge
+  ✓ basicBeginner
+  ✓ bro-split
+  ✓ bullmastiff
+  ✓ calgary-barbell-16-week
+  ✓ coolcicada-ppl
+  ✓ cube-method
+  ✓ dbPpl
+  ✓ deep-water
+  ✓ doggcrapp
+  ✓ doug-hepburn-method
+  ✓ easy-strength
+  ✓ fierce-5
+  ✓ german-volume-training
+  ✓ gzcl-general-gainz-burrito-but-big
+  ✓ gzcl-general-gainz-riptide
+  ✓ gzcl-general-gainz
+  ✓ gzcl-ggbb
+  ✓ gzcl-jacked-and-tan-2
+  ✓ gzcl-the-rippler
+  ✓ gzcl-uhf-5-weeks
+  ✓ gzcl-uhf-9-weeks
+  ✓ gzcl-vdip
+  ✓ gzclp-blacknoir
+  ✓ gzclp
+  ✓ ice-cream-fitness-5x5
+  ✓ ivysaur-4-4-8
+  ✓ jay-cutler-split
+  ✓ juggernaut-method
+  ✓ lylegenericbulking
+  ✓ madcow
+  ✓ metallicadpappl
+  ✓ mike-mentzer-consolidated
+  ✓ mike-mentzer-heavy-duty
+  ✓ monolith531
+  ✓ nsuns
+  ✓ phat
+  ✓ phrakgreyskull
+  ✓ phul
+  ✓ planet-fitness-hypertrophy
+  ✓ pzerofullbody
+  ✓ sheiko-29-32
+  ✓ shortcut-to-size
+  ✓ smolov-jr
+  ✓ smolov-squat
+  ✓ ss1
+  ✓ ss2
+  ✓ ss3
+  ✓ strongcurves
+  ✓ tactical-barbell-mass-protocol
+  ✓ tactical-barbell-operator
+  ✓ texasmethod
+  ✓ the5314b
+  ✓ the531bbb
+  ✓ tsa-9-week-intermediate
+  ✓ westside-conjugate-method
+  ✓ westside-for-skinny-bastards
+✓ Generated programdata/index.json (59 programs)
+✓ Generated 59 program detail files in programdata/programs/
+
+> vmrlift@1.0.0 build:exercises
+> cross-env TS_NODE_TRANSPILE_ONLY=1 ts-node scripts/build-exercises.ts
+
+Generated C:\Projects\VMR-Lift\VMR-Lift\src\models\exerciseDescriptions.ts with 333 exercises
+assets by path [1m[32mimages/[39m[22m 32.2 MiB 169 assets
+assets by path [1m[32mprogramdata/[39m[22m 969 KiB 60 assets
+assets by path [1m[32m*.js[39m[22m 148 MiB 29 assets
+assets by path [1m[32m*.css[39m[22m 2.4 MiB 27 assets
+assets by path [1m[32mfonts/*.woff2[39m[22m 578 KiB 19 assets
+assets by info 1.3 MiB [1m[32m[immutable][39m[22m 12 assets
+assets by path [1m[32mdocs/[39m[22m 131 KiB 8 assets
+assets by path [1m[32m*.html[39m[22m 56.4 KiB 7 assets
+assets by path [1m[32micons/[39m[22m 164 KiB 6 assets
+assets by path [1m[32m.well-known/[39m[22m 1.5 KiB
+  asset [1m[32m.well-known/assetlinks.json[39m[22m 1.09 KiB [1m[32m[emitted][39m[22m
+  asset [1m[32m.well-known/apple-app-site-association[39m[22m 422 bytes [1m[32m[emitted][39m[22m
++ 8 assets
+runtime modules 200 KiB 368 modules
+orphan modules 267 KiB [1m[33m[orphan][39m[22m 82 modules
+modules by path [1m./node_modules/[39m[22m 6.44 MiB (javascript) 2.7 KiB (asset) 1.84 KiB (css/mini-extract) 1254 modules
+modules by path [1m./src/[39m[22m 5.04 MiB (javascript) 200 KiB (css/mini-extract)
+  javascript modules 5.04 MiB 747 modules
+  css modules 200 KiB
+    css ./node_modules/css-loader/dist/cjs.js!./node_modules/postcss-loader/dist/cjs.js![1m./src/index.css[39m[22m 95 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+    + 9 modules
+modules by path [1m./*.json[39m[22m 5.73 KiB
+  [1m./tailwind.colors.json[39m[22m 1.54 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+  [1m./tailwind.semantic.generated.json[39m[22m 4.18 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[1m./lambda/utils/mobile.ts[39m[22m 823 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+webpack 5.105.4 compiled [1m[32msuccessfully[39m[22m in 53216 ms
+
+asset [1m[32mwatch-bundle.js[39m[22m 1.96 MiB [1m[32m[emitted][39m[22m (name: main)
+asset [1m[32msrc_navigation_navigationService_ts.watch-bundle.js[39m[22m 1.18 MiB [1m[32m[emitted][39m[22m
+asset [1m[32msrc_navigation_navigationRef_ts.watch-bundle.js[39m[22m 1.17 MiB [1m[32m[emitted][39m[22m
+asset [1m[32mnode_modules_react-navigation_native_lib_module_index_js.watch-bundle.js[39m[22m 1.17 MiB [1m[32m[emitted][39m[22m
+orphan modules 1.62 MiB [1m[33m[orphan][39m[22m 192 modules
+runtime modules 2.52 KiB 8 modules
+modules by path [1m./node_modules/[39m[22m 1.25 MiB 401 modules
+modules by path [1m./src/[39m[22m 1.08 MiB
+  modules by path [1m./src/utils/[39m[22m 133 KiB 49 modules
+  modules by path [1m./src/models/[39m[22m 479 KiB 36 modules
+  modules by path [1m./src/pages/planner/[39m[22m 137 KiB 9 modules
+  modules by path [1m./src/*.ts[39m[22m 84.3 KiB 4 modules
+  modules by path [1m./src/navigation/*.ts[39m[22m 3.29 KiB 3 modules
+  modules by path [1m./src/migrations/*.ts[39m[22m 15.1 KiB 2 modules
+  modules by path [1m./src/ducks/*.ts[39m[22m 102 KiB 2 modules
+  modules by path [1m./src/lib/*.ts[39m[22m 3.71 KiB 2 modules
+  + 6 modules
+[1mexternal "worker_threads"[39m[22m 42 bytes [1m[33m[optional][39m[22m [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[1mexternal "{}"[39m[22m 42 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+webpack 5.105.4 compiled [1m[32msuccessfully[39m[22m in 29040 ms
+
+editorWebview:
+  asset [1m[33meditor.html[39m[22m [1m[33m2.14 MiB[39m[22m [1m[32m[emitted][39m[22m [1m[33m[big][39m[22m
+  orphan modules 2.58 MiB [1m[33m[orphan][39m[22m 153 modules
+  runtime modules 1 KiB 6 modules
+  cacheable modules 2.14 MiB
+    modules by path [1m./node_modules/[39m[22m 184 KiB
+      modules by path [1m./node_modules/webpack-dev-server/client/[39m[22m 55.8 KiB 4 modules
+      modules by path [1m./node_modules/html-entities/lib/*.js[39m[22m 78 KiB 4 modules
+      modules by path [1m./node_modules/webpack/[39m[22m 16.3 KiB 3 modules
+      modules by path [1m./node_modules/css-loader/dist/runtime/*.js[39m[22m 3.27 KiB 2 modules
+      modules by path [1m./node_modules/lens-shmens/dist/[39m[22m 19.7 KiB 2 modules
+      + 2 modules
+    modules by path [1m./src/pages/planner/webviewEditor/[39m[22m 1.61 MiB
+      [1m./src/pages/planner/webviewEditor/editorWebviewEntry.ts + 36 modules[39m[22m 1.61 MiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+      [1m./src/pages/planner/webviewEditor/editorWebview.css[39m[22m 596 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+      ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[0].use[1]![1m./src/pages/planner/webviewEditor/editorWebview.css[39m[22m 6.3 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+    [1m./fonts/iosevka-regular.woff2[39m[22m 355 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+  [1meditorWebview[39m[22m (webpack 5.105.4) compiled [1m[32msuccessfully[39m[22m in 15864 ms
+assets by status 1.3 MiB [1m[32m[cached][39m[22m 12 assets
+assets by status 151 MiB [1m[32m[emitted][39m[22m
+  assets by path [1m[32m*.js[39m[22m 148 MiB
+    asset [1m[32mvendors.js[39m[22m 7.94 MiB [1m[32m[emitted][39m[22m (name: vendors) (id hint: vendors) 1 related asset
+    asset [1m[32mprogram.js[39m[22m 7.6 MiB [1m[32m[emitted][39m[22m (name: program) 1 related asset
+    asset [1m[32mplanner.js[39m[22m 7.59 MiB [1m[32m[emitted][39m[22m (name: planner) 1 related asset
+    asset [1m[32mallexercises.js[39m[22m 7.32 MiB [1m[32m[emitted][39m[22m (name: allexercises) 1 related asset
+    + 25 assets
+  assets by path [1m[32m*.css[39m[22m 2.4 MiB
+    asset [1m[32mdocdetails.css[39m[22m 103 KiB [1m[32m[emitted][39m[22m (name: docdetails)
+    asset [1m[32mprogramdetails.css[39m[22m 103 KiB [1m[32m[emitted][39m[22m (name: programdetails)
+    asset [1m[32mprogrampreview.css[39m[22m 103 KiB [1m[32m[emitted][39m[22m (name: programpreview)
+    asset [1m[32mprogram.css[39m[22m 102 KiB [1m[32m[emitted][39m[22m (name: program)
+    asset [1m[32mprogramsList.css[39m[22m 102 KiB [1m[32m[emitted][39m[22m (name: programsList)
+    + 22 assets
+cached modules 11.5 MiB (javascript) 202 KiB (css/mini-extract) 2.7 KiB (asset) 200 KiB (runtime) [1m[32m[cached][39m[22m 2451 modules
+orphan modules 176 KiB [1m[33m[orphan][39m[22m 2 modules
+javascript modules 100 bytes
+  [1m./src/index.css[39m[22m 50 bytes [1m[33m[built][39m[22m
+  [1m./src/admin.css[39m[22m 50 bytes [1m[33m[built][39m[22m
+webpack 5.105.4 compiled [1m[32msuccessfully[39m[22m in 12445 ms
+
+asset [1m[32mwatch-bundle.js[39m[22m 1.96 MiB [1m[32m[emitted][39m[22m (name: main)
+asset [1m[32msrc_navigation_navigationService_ts.watch-bundle.js[39m[22m 1.18 MiB [1m[32m[emitted][39m[22m
+asset [1m[32msrc_navigation_navigationRef_ts.watch-bundle.js[39m[22m 1.17 MiB [1m[32m[emitted][39m[22m
+asset [1m[32mnode_modules_react-navigation_native_lib_module_index_js.watch-bundle.js[39m[22m 1.17 MiB [1m[32m[emitted][39m[22m
+orphan modules 1.62 MiB [1m[33m[orphan][39m[22m 192 modules
+runtime modules 2.52 KiB 8 modules
+modules by path [1m./node_modules/[39m[22m 1.25 MiB 401 modules
+modules by path [1m./src/[39m[22m 1.08 MiB
+  modules by path [1m./src/utils/[39m[22m 133 KiB 49 modules
+  modules by path [1m./src/models/[39m[22m 479 KiB 36 modules
+  modules by path [1m./src/pages/planner/[39m[22m 137 KiB 9 modules
+  modules by path [1m./src/*.ts[39m[22m 84.3 KiB 4 modules
+  modules by path [1m./src/navigation/*.ts[39m[22m 3.29 KiB 3 modules
+  modules by path [1m./src/migrations/*.ts[39m[22m 15.1 KiB 2 modules
+  modules by path [1m./src/ducks/*.ts[39m[22m 102 KiB 2 modules
+  modules by path [1m./src/lib/*.ts[39m[22m 3.71 KiB 2 modules
+  + 6 modules
+[1mexternal "worker_threads"[39m[22m 42 bytes [1m[33m[optional][39m[22m [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[1mexternal "{}"[39m[22m 42 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+webpack 5.105.4 compiled [1m[32msuccessfully[39m[22m in 29040 ms
+
+editorWebview:
+  asset [1m[33meditor.html[39m[22m [1m[33m2.14 MiB[39m[22m [1m[32m[emitted][39m[22m [1m[33m[big][39m[22m
+  orphan modules 2.58 MiB [1m[33m[orphan][39m[22m 153 modules
+  runtime modules 1 KiB 6 modules
+  cacheable modules 2.14 MiB
+    modules by path [1m./node_modules/[39m[22m 184 KiB
+      modules by path [1m./node_modules/webpack-dev-server/client/[39m[22m 55.8 KiB 4 modules
+      modules by path [1m./node_modules/html-entities/lib/*.js[39m[22m 78 KiB 4 modules
+      modules by path [1m./node_modules/webpack/[39m[22m 16.3 KiB 3 modules
+      modules by path [1m./node_modules/css-loader/dist/runtime/*.js[39m[22m 3.27 KiB 2 modules
+      modules by path [1m./node_modules/lens-shmens/dist/[39m[22m 19.7 KiB 2 modules
+      + 2 modules
+    modules by path [1m./src/pages/planner/webviewEditor/[39m[22m 1.61 MiB
+      [1m./src/pages/planner/webviewEditor/editorWebviewEntry.ts + 36 modules[39m[22m 1.61 MiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+      [1m./src/pages/planner/webviewEditor/editorWebview.css[39m[22m 596 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+      ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[0].use[1]![1m./src/pages/planner/webviewEditor/editorWebview.css[39m[22m 6.3 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+    [1m./fonts/iosevka-regular.woff2[39m[22m 355 KiB [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+  [1meditorWebview[39m[22m (webpack 5.105.4) compiled [1m[32msuccessfully[39m[22m in 15864 ms

@@ -20,3 +20,4 @@ export function IconCamera(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

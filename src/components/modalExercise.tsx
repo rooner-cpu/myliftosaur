@@ -723,3 +723,4 @@ function ExerciseTemplate(props: IExerciseTemplateProps): JSX.Element {
     </form>
   );
 }
+

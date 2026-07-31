@@ -1,7 +1,7 @@
 ---
 date: "2024-02-27"
-title: Make new Liftosaur programs less repetitive
-og_title: Make new Liftosaur programs less repetitive | Liftosaur blog
+title: Make new VMR-Lift programs less repetitive
+og_title: Make new VMR-Lift programs less repetitive | VMR-Lift blog
 og_description: Planned syntax improvements to make the weightlifting programs using new syntax less repetitive
 og_image: /images/make-new-liftosaur-programs-less-repetetive-intro.jpg
 tags: ["weightlifting", "tech"]
@@ -117,3 +117,4 @@ Squat[1-8] / ...Bench Press / progress: custom() { ...Bench Press }
 ## Conclusion
 
 Those 3 features IMHO should simplify the process of creating new programs A LOT. Let me know what you think - in the comments to the Reddit post!
+

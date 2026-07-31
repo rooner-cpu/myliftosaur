@@ -227,3 +227,4 @@ const PlatesCalculator = memo(function PlatesCalculator(props: IPlatesCalculator
     </View>
   );
 });
+

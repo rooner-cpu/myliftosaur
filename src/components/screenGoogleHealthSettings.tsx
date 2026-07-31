@@ -87,3 +87,4 @@ export function ScreenGoogleHealthSettings(props: IProps): JSX.Element {
     </View>
   );
 }
+

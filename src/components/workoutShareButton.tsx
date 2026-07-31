@@ -44,3 +44,4 @@ export function WorkoutShareButton(props: IWorkoutShareButtonProps): JSX.Element
     </View>
   );
 }
+

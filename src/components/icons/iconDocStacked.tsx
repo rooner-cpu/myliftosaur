@@ -105,3 +105,4 @@ export function IconDocStacked(props: IProps): JSX.Element {
     </svg>
   );
 }
+

@@ -95,3 +95,4 @@ export function NavModalEditUpdateScript(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

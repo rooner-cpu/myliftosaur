@@ -22,3 +22,4 @@ export function IconArrowUp(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

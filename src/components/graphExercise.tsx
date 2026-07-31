@@ -373,3 +373,4 @@ function GraphExerciseLegend(props: IGraphExerciseLegendProps): JSX.Element | nu
     </View>
   );
 }
+

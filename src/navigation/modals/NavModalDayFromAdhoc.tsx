@@ -57,3 +57,4 @@ export function NavModalDayFromAdhoc(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

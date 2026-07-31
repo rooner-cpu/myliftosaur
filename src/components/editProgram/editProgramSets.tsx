@@ -12,3 +12,4 @@ export function SetNumber(props: { setIndex: number; size?: "md" | "sm" }): JSX.
     </View>
   );
 }
+

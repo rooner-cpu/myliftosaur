@@ -48,3 +48,4 @@ export function ScreenRecentImports(props: IProps): JSX.Element {
     </View>
   );
 }
+

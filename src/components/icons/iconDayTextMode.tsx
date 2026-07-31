@@ -37,3 +37,4 @@ export function IconDayTextMode(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

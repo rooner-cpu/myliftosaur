@@ -44,3 +44,4 @@ export function IconEquipmentLeverageMachine(props: IIconEquipmentLeverageMachin
     </Svg>
   );
 }
+

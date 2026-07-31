@@ -531,3 +531,4 @@ function WorkoutExerciseCardInner(props: IWorkoutExerciseCardProps): JSX.Element
 }
 
 export const WorkoutExerciseCard = memo(WorkoutExerciseCardInner);
+

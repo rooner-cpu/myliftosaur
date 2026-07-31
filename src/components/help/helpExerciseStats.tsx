@@ -23,3 +23,4 @@ export function HelpExerciseStats(): JSX.Element {
     </View>
   );
 }
+

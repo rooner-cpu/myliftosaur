@@ -374,3 +374,4 @@ Squat / 1x1 @10 / 300s
 Bench Press / 1x1 @10 / 300s
 Deadlift / 1x1 @10 / 300s
 ```
+

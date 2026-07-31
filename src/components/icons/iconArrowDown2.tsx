@@ -22,3 +22,4 @@ export function IconArrowDown2(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

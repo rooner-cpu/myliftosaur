@@ -35,3 +35,4 @@ export function Notification(props: IProps): JSX.Element | null {
     </div>
   );
 }
+

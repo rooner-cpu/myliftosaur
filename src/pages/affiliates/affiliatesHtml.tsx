@@ -17,11 +17,11 @@ export function AffiliatesHtml(props: IAffiliatesHtmlProps): JSX.Element {
       css={["affiliates"]}
       js={["affiliates"]}
       maxWidth={1200}
-      title="Affiliate Program | Liftosaur"
-      ogTitle="Affiliate Program | Liftosaur"
-      canonical="https://www.liftosaur.com/affiliates"
-      description="Liftosaur's affiliate program - earn money by referring paid users to Liftosaur"
-      ogUrl="https://www.liftosaur.com/affiliates"
+      title="Affiliate Program | VMR-Lift"
+      ogTitle="Affiliate Program | VMR-Lift"
+      canonical="http://myliftosaur.local:8081/affiliates"
+      description="VMR-Lift's affiliate program - earn money by referring paid users to VMR-Lift"
+      ogUrl="http://myliftosaur.local:8081/affiliates"
       data={data}
       client={client}
     >
@@ -29,3 +29,4 @@ export function AffiliatesHtml(props: IAffiliatesHtmlProps): JSX.Element {
     </Page>
   );
 }
+

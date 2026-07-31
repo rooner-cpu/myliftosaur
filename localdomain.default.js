@@ -1,8 +1,8 @@
 module.exports = {
-  main: "local",
+  main: "vmr-lift.local",
   api: "local-api",
   streamingapi: "local-streaming-api",
-  port: 8080,
+  port: 8081,
   apiPort: 3000,
   streamingApiPort: 3001,
   metroPort: 8081,

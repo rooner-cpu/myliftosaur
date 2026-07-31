@@ -102,3 +102,4 @@ export function ProgramDetailsExerciseExampleGraph(props: IProgramDetailsExercis
     </div>
   );
 }
+

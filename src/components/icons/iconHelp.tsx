@@ -27,3 +27,4 @@ export function IconHelp(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

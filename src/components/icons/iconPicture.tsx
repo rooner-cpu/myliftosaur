@@ -22,3 +22,4 @@ export function IconPicture(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

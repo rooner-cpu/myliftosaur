@@ -239,3 +239,4 @@ function ProgramPreviewTabExerciseTopBar(props: IProgramPreviewTabExerciseTopBar
     </View>
   );
 }
+

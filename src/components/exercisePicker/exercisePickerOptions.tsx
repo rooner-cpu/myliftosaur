@@ -45,3 +45,4 @@ export function ExercisePickerOptions<T extends string>(props: IProps<T>): JSX.E
     </View>
   );
 }
+

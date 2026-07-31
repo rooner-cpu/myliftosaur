@@ -82,3 +82,4 @@ export function MenuItem(props: IMenuItemProps): JSX.Element {
     </MenuItemWrapper>
   );
 }
+

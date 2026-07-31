@@ -22,3 +22,4 @@ export function IconCalculator(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

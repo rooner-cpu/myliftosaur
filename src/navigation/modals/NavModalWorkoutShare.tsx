@@ -173,3 +173,4 @@ export function NavModalWorkoutShare(): JSX.Element {
     </SheetScreenContainer>
   );
 }
+

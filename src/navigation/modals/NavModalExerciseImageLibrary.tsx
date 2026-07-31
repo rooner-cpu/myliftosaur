@@ -38,3 +38,4 @@ export function NavModalExerciseImageLibrary(): JSX.Element {
     </SheetScreenContainer>
   );
 }
+

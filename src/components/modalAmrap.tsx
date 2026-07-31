@@ -297,3 +297,4 @@ export function UserPromptedStateVar(props: IUserPromptedStateVarProps): JSX.Ele
     </View>
   );
 }
+

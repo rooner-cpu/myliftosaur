@@ -11,8 +11,8 @@ interface IProps {
 
 export function UserHtml(props: IProps): JSX.Element {
   const username = props.data.settings.nickname;
-  const title = username ? `${username} Profile Page | Liftosaur` : "Profile Page | Liftosaur";
-  const url = `https://www.liftosaur.com/profile/${props.userId}`;
+  const title = username ? `${username} Profile Page | VMR-Lift` : "Profile Page | VMR-Lift";
+  const url = `http://myliftosaur.local:8081/profile/${props.userId}`;
   return (
     <Page
       css={["user"]}
@@ -21,7 +21,7 @@ export function UserHtml(props: IProps): JSX.Element {
       canonical={url}
       ogUrl={url}
       description="User Profile - What program user follows, the max weights lifted and progress graphs."
-      ogImage={`https://www.liftosaur.com/profileimage/${props.userId}`}
+      ogImage={`http://myliftosaur.local:8081/profileimage/${props.userId}`}
       data={props.data}
       client={props.client}
     >
@@ -29,3 +29,4 @@ export function UserHtml(props: IProps): JSX.Element {
     </Page>
   );
 }
+

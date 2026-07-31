@@ -1,7 +1,7 @@
 ---
 date: "2021-01-17"
 title: How to start weightlifting
-og_title: How to start weightlifting | Liftosaur blog
+og_title: How to start weightlifting | VMR-Lift blog
 og_description: Simple and straightforward steps how to start weightlifting
 og_image: /images/how-to-start-weightlifting-intro.jpg
 tags: ["weightlifting"]
@@ -25,13 +25,14 @@ Then, if you have access to gym with **a barbell and a power rack** (recommended
 
 2. Read about [Fitness Basic Beginner Routine](https://thefitness.wiki/routines/r-fitness-basic-beginner-routine/).
 3. Google for videos how to make the exercises from there with a proper form. Like ["How to bench press with proper form"](https://www.google.com/search?q=how+to+bench+press+proper+form).
-4. Go to [Liftosaur](https://www.liftosaur.com), select "Basic Beginner Routine" program, and start training.
+4. Go to [VMR-Lift](http://myliftosaur.local:8081), select "Basic Beginner Routine" program, and start training.
 
 If you don't have access to gym with barbell, but at least have **dumbbells of various weight and some sort of bench**:
 
 2. Read about [Dumbbell PPL](https://old.reddit.com/r/Fitness/comments/2e79y4/dumbbell_ppl_proposed_alternative_to_dumbbell/) program.
 3. Google for videos how to make the exercises from there with a proper form. Like ["How to dumbbell chest press proper form"](https://www.google.com/search?q=How+to+dumbbell+chest+press+proper+form).
-4. Go to [Liftosaur](https://www.liftosaur.com), select "Dumbbell PPL" program, and start training.
+4. Go to [VMR-Lift](http://myliftosaur.local:8081), select "Dumbbell PPL" program, and start training.
 
 That's it. It's that simple. Whole initial reading and videos watching would probably take like 1 hour.
 And then you'll spend around 40-60 minutes in gym about 3 times a week.
+

@@ -350,3 +350,4 @@ Squat / 1x3 65%, 1x2 75%, 1x1 85% / 180s
 
 ## Bodybuilding Day
 ```
+

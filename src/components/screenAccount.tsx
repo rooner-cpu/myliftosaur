@@ -37,6 +37,9 @@ import { Tailwind_colors, Tailwind_semantic } from "../utils/tailwindConfig";
 import { IIapActiveSubscription } from "../utils/iapAdapter";
 import { SubscriptionPlan_derive, ISubscriptionPlanKind, IDerivedSubscriptionPlan } from "../utils/subscriptionPlan";
 import { DateUtils_format } from "../utils/date";
+import { Standalone_localMode } from "../config/standalone";
+import { VmrAccountPanel } from "./vmrAccountPanel";
+import { useVmrDatabaseStatus } from "../utils/vmrDatabaseStatus";
 
 declare let __HOST__: string;
 
@@ -55,6 +58,7 @@ interface IProps {
 export function ScreenAccount(props: IProps): JSX.Element {
   const [otherAccounts, setOtherAccounts] = useState<IAccount[]>([]);
   const [isOtherAccountsEditMode, setIsOtherAccountsEditMode] = useState<boolean>(false);
+  const vmrDatabase = useVmrDatabaseStatus();
 
   const currentAccountId = props.userId || props.storage.tempUserId;
   const currentAccount: IAccount = {
@@ -131,6 +135,62 @@ export function ScreenAccount(props: IProps): JSX.Element {
     android: { elevation: 2 },
     default: { boxShadow: "0 1px 4px 0 rgba(0,0,0,0.1)" },
   });
+
+  if (Standalone_localMode) {
+    return (
+      <View className="px-4">
+        <GroupHeader name="Current Profile" />
+        <MenuItem
+          isBorderless={true}
+          expandName={true}
+          name={currentAccount.name ? currentAccount.name : `id: ${currentAccount.id}`}
+          value={
+            <View className="flex-row items-center">
+              <Text className="pr-2 text-text-primary">{currentAccount.numberOfPrograms}</Text>
+              <View className="pr-4">
+                <IconDoc width={12} height={16} />
+              </View>
+              <Text className="pr-2 text-text-primary">{currentAccount.numberOfWorkouts}</Text>
+              <View>
+                <IconDumbbell width={28} height={19} />
+              </View>
+            </View>
+          }
+          addons={
+            <View>
+              {currentAccount.name ? (
+                <Text className="-mt-1 text-xs text-text-secondary">{`id: ${currentAccount.id}`}</Text>
+              ) : null}
+              {vmrDatabase.account ? (
+                <Text className="text-xs text-text-secondary">
+                  Signed in as <Text className="text-sm font-bold text-text-secondary">{vmrDatabase.account.email}</Text>
+                </Text>
+              ) : (
+                <Text className="text-xs text-text-error">Not signed in</Text>
+              )}
+            </View>
+          }
+        />
+        <GroupHeader name="VMR-Lift Account" topPadding={true} />
+        <VmrAccountPanel />
+        <GroupHeader name="Local Profiles" topPadding={true} />
+        <LinkButton
+          name="local-account-create"
+          onClick={async () => {
+            if (
+              await Dialog_confirm(
+                "Want to create a new local profile? You will not lose your current profile, and you can switch back to it later."
+              )
+            ) {
+              props.dispatch(Thunk_createAccount());
+            }
+          }}
+        >
+          Create New Local Profile
+        </LinkButton>
+      </View>
+    );
+  }
 
   return (
     <View className="px-4">

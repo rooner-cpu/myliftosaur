@@ -1,8 +1,8 @@
 ---
 date: "2025-09-01"
-title: Overview of Liftosaur - scriptable weightlifting planner and tracker app
-og_title: Overview of Liftosaur - scriptable weightlifting planner and tracker app | Liftosaur blog
-og_description: Highlevel overview of various featuers of Liftosaur - what the onboarding looks like, picking a program, tracking workouts, using the web editor.
+title: Overview of VMR-Lift - scriptable weightlifting planner and tracker app
+og_title: Overview of VMR-Lift - scriptable weightlifting planner and tracker app | VMR-Lift blog
+og_description: Highlevel overview of various featuers of VMR-Lift - what the onboarding looks like, picking a program, tracking workouts, using the web editor.
 og_image: /images/youtube/20250901-liftosaur-overview.png
 tags: ["weightlifting", "app"]
 ---
@@ -12,7 +12,7 @@ tags: ["weightlifting", "app"]
 <div class="subscription">Check out the video version of this post on Youtube!</div>
 </a>
 
-In this post I want to go over the main features of Liftosaur - a scriptable workout planner and tracker app.
+In this post I want to go over the main features of VMR-Lift - a scriptable workout planner and tracker app.
 This is probably the most powerful lifting app on the market, incredibly flexible and customizable. You can
 implement any program you want, and change every bit of it. You can specify any progressive overload logic you want, even script it if it's somewhat unique.
 
@@ -49,7 +49,7 @@ The app is pretty unique, so hopefully this post may help you decide whether you
 
 <div class="image-with-text image-with-text-reverse">
   <div>
-    Now we can choose a built-in program, create our own, or just go without a program. Liftosaur really works best if you have the program you follow, but there're also ways to gradually build it over time as well. There're filters at the top to help you find the program that fits your goals, your schedule, how much time you can spend in a gym, etc. Let's choose e.g. GZCLP to start with.
+    Now we can choose a built-in program, create our own, or just go without a program. VMR-Lift really works best if you have the program you follow, but there're also ways to gradually build it over time as well. There're filters at the top to help you find the program that fits your goals, your schedule, how much time you can spend in a gym, etc. Let's choose e.g. GZCLP to start with.
   </div>
   <img src="../../images/liftosaur-overview/programs.png" alt="Programs screen" />
 </div>
@@ -122,10 +122,10 @@ When you finish a workout, it changes the current program. The program under the
   <img src="../../images/liftosaur-overview/programtext.png" alt="Program Text Screen" />
   <div>
     <p>
-      If we go to Program screen, we could actually see and edit the program text. Go to Edit, then tap this coding icon. The program is written using special markup/scripting language called <a href="https://www.liftosaur.com/docs">Liftoscript</a>. You can define the weeks, days, exercises, and write the progression logic right there. The syntax is simple, and you don't have to define scripts, you can just use built-in progressions, like linear or double progression.
+      If we go to Program screen, we could actually see and edit the program text. Go to Edit, then tap this coding icon. The program is written using special markup/scripting language called <a href="http://myliftosaur.local:8081/docs">Liftoscript</a>. You can define the weeks, days, exercises, and write the progression logic right there. The syntax is simple, and you don't have to define scripts, you can just use built-in progressions, like linear or double progression.
     </p>
     <p>
-      Programs being just text is a very powerful concept. You can easily share them, you can store them even in your Notes, you can edit them in any text editor. Liftosaur provides IDE for that, so it'd have autocomplete, error checking, etc - both in the app or on the web, in a browser. Editing a lot of text on a phone could be quite inconvenient, so it's usually easier to do that from a laptop.
+      Programs being just text is a very powerful concept. You can easily share them, you can store them even in your Notes, you can edit them in any text editor. VMR-Lift provides IDE for that, so it'd have autocomplete, error checking, etc - both in the app or on the web, in a browser. Editing a lot of text on a phone could be quite inconvenient, so it's usually easier to do that from a laptop.
     </p>
   </div>
 </div>
@@ -146,7 +146,7 @@ Now, this is a vanilla GZCLP with just one T3 exercise added - it's a lat pulldo
 
 ## Web Editor
 
-If you open [liftosaur.com](https://www.liftosaur.com), you can log in there, go to Your Programs, and edit our GZCLP program.
+If you open [liftosaur.com](http://myliftosaur.local:8081), you can log in there, go to Your Programs, and edit our GZCLP program.
 
 <div class="highlight-block">
   <img src="../../images/liftosaur-overview/website.png" width="600" alt="Website screenshot" />
@@ -169,7 +169,8 @@ So, we can see we're kinda weak on biceps, triceps and forearms, so let's add so
 
 Now we can save it, and enjoy our updated GZCLP program. If we open the app now, it will sync the updated program, and we can do workouts with it.
 
-That's the main functionality of the app. There's more stuff - there're graphs, RPE support, body measurements, etc, etc, and the [Liftoscript language](https://www.liftosaur.com/docs) allows you to do a lot of things.
+That's the main functionality of the app. There's more stuff - there're graphs, RPE support, body measurements, etc, etc, and the [Liftoscript language](http://myliftosaur.local:8081/docs) allows you to do a lot of things.
 
 So, check it out, and hopefully this gives you a good overview of the app!
+
 

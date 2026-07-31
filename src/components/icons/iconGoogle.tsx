@@ -31,3 +31,4 @@ export function IconGoogle(): JSX.Element {
     </Svg>
   );
 }
+

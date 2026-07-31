@@ -58,3 +58,4 @@ export const ExercisePickerTemplate = memo(function ExercisePickerTemplate(props
     </View>
   );
 });
+

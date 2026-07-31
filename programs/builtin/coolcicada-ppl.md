@@ -232,3 +232,4 @@ Leg Extension / 3x10 / 50lb / 120s
 Lying Leg Curl / 3x10 / 50lb / 120s
 Standing Calf Raise / 5x10 / 90lb / 120s
 ```
+

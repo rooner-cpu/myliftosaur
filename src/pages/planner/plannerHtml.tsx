@@ -21,8 +21,8 @@ export function PlannerHtml(props: IProps): JSX.Element {
   const programName = data.initialProgram?.program?.name;
   const title =
     programName != null
-      ? `${HtmlUtils_escapeHtml(programName)} | Workout Editor | Liftosaur`
-      : "Weightlifting Workout Planner | Liftosaur";
+      ? `${HtmlUtils_escapeHtml(programName)} | Workout Editor | VMR-Lift`
+      : "Weightlifting Workout Planner | VMR-Lift";
 
   return (
     <Page
@@ -33,8 +33,8 @@ export function PlannerHtml(props: IProps): JSX.Element {
       maxBodyWidth={2400}
       title={title}
       description="The weightlifting program editor, that helps to balance volume, time and muscles worked"
-      canonical="https://www.liftosaur.com/planner"
-      ogUrl="https://www.liftosaur.com/planner"
+      canonical="http://myliftosaur.local:8081/planner"
+      ogUrl="http://myliftosaur.local:8081/planner"
       data={data}
       url="/planner"
       client={client}
@@ -44,3 +44,4 @@ export function PlannerHtml(props: IProps): JSX.Element {
     </Page>
   );
 }
+

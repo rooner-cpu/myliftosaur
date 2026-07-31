@@ -77,3 +77,4 @@ export function NavModalProgramInfo(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

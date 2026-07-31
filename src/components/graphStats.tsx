@@ -169,3 +169,4 @@ function GraphStatsInner(props: IGraphStatsProps): JSX.Element {
 }
 
 export const GraphStats = memo(GraphStatsInner);
+

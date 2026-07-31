@@ -67,3 +67,4 @@ export default function StorySlider({ slides, duration = 5000 }: IStorySliderPro
     </View>
   );
 }
+

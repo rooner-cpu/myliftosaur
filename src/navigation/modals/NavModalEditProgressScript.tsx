@@ -97,3 +97,4 @@ export function NavModalEditProgressScript(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

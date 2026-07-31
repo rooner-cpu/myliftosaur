@@ -218,3 +218,4 @@ export function UserAffiliatesContent(props: IUserAffiliatesContentProps): JSX.E
     </section>
   );
 }
+

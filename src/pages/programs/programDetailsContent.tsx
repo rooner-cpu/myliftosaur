@@ -180,3 +180,4 @@ export function ProgramDetailsContent(props: IProgramDetailsContentProps): JSX.E
     </section>
   );
 }
+

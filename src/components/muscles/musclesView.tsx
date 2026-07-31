@@ -170,3 +170,4 @@ export function MusclesTypeView(props: IMusclesTypeViewProps): JSX.Element {
     </View>
   );
 }
+

@@ -24,3 +24,4 @@ export function Slider(props: ISliderProps): JSX.Element {
     },
   });
 }
+

@@ -23,3 +23,4 @@ export function IconEyeClosed(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

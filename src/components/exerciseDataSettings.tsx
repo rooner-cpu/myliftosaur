@@ -154,3 +154,4 @@ function ExerciseDataSettingsInner(props: IExerciseDataSettingsProps): JSX.Eleme
 }
 
 export const ExerciseDataSettings = memo(ExerciseDataSettingsInner);
+

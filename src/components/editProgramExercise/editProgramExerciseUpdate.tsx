@@ -236,3 +236,4 @@ function UpdateContent(props: IUpdateContentProps): JSX.Element {
     </>
   );
 }
+

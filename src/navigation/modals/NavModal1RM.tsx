@@ -196,3 +196,4 @@ export function NavModal1RM(): JSX.Element {
   }
   return <NavModal1RMWorkout progressId={params.progressId} />;
 }
+

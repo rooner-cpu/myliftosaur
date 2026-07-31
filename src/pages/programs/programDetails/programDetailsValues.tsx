@@ -38,3 +38,4 @@ export const RepsAndWeight = memo((props: IRepsWeightsProps): JSX.Element => {
     </div>
   );
 });
+

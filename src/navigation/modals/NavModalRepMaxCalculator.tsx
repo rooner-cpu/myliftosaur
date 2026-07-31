@@ -40,3 +40,4 @@ export function NavModalRepMaxCalculator(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

@@ -6,3 +6,4 @@ function main(): void {
 }
 
 main();
+

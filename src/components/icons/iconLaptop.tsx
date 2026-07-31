@@ -29,3 +29,4 @@ export function IconLaptop(props: IProps): JSX.Element {
     </svg>
   );
 }
+

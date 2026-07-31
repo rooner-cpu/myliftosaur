@@ -24,3 +24,4 @@ export function HelpStats(): JSX.Element {
     </View>
   );
 }
+

@@ -28,3 +28,4 @@ export function IconEquipmentBarbell(props: IIconEquipmentBarbellProps): JSX.Ele
     </Svg>
   );
 }
+

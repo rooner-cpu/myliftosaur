@@ -11,8 +11,8 @@ export function ProgramPreviewHtml(props: IProps): JSX.Element {
     <Page
       css={["programpreview"]}
       js={["programpreview"]}
-      title="Program Previewer | Liftosaur"
-      canonical="https://www.liftosaur.com/program-preview"
+      title="Program Previewer | VMR-Lift"
+      canonical="http://myliftosaur.local:8081/program-preview"
       maxWidth={10000}
       maxBodyWidth={10000}
       data={{}}
@@ -22,3 +22,4 @@ export function ProgramPreviewHtml(props: IProps): JSX.Element {
     </Page>
   );
 }
+

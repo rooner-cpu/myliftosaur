@@ -86,3 +86,4 @@ export function IconSpinner(props: IProps): JSX.Element {
     </Animated.View>
   );
 }
+

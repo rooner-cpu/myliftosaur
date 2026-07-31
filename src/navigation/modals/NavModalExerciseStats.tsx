@@ -77,3 +77,4 @@ export function NavModalExerciseStats(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

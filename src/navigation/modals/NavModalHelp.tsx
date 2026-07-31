@@ -29,7 +29,7 @@ export function NavModalHelp(): JSX.Element {
         <Text className="text-sm text-text-secondary">
           If you still have questions, or if you encountered a bug, have a feature idea, or just want to share some
           feedback - don't hesitate to{" "}
-          <Link className="text-sm" href="mailto:info@liftosaur.com">
+          <Link className="text-sm" href="mailto:rooner@gmail.com">
             contact us
           </Link>
           ! Or join our{" "}
@@ -43,3 +43,5 @@ export function NavModalHelp(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+
+

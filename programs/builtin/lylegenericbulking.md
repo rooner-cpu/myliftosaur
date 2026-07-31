@@ -170,3 +170,4 @@ Chin Up / 2x10 / 0lb / 120s / warmup: none / progress: dp(5lb, 10, 12)
 Skullcrusher / 2x12 / 45lb / 90s / warmup: none / progress: dp(5lb, 12, 15)
 Hammer Curl / 2x12 / 25lb / 90s / warmup: none / progress: dp(5lb, 12, 15)
 ```
+

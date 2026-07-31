@@ -787,3 +787,4 @@ export function App(): React.JSX.Element {
     </GestureHandlerRootView>
   );
 }
+

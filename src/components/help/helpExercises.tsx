@@ -13,3 +13,4 @@ export function HelpExercises(): JSX.Element {
     </View>
   );
 }
+

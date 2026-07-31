@@ -242,3 +242,4 @@ export function EditProgramExerciseDay(props: IEditProgramExerciseDayProps): JSX
     </View>
   );
 }
+

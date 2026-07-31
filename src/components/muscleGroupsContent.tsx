@@ -155,3 +155,4 @@ export function MuscleGroupsContent(props: IProps): JSX.Element {
     </View>
   );
 }
+

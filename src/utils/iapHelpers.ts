@@ -47,7 +47,7 @@ export function IapHelpers_setLoading(
 
 export function IapHelpers_alertAlreadySubscribed(): void {
   Dialog_alert(
-    "You already have an active Liftosaur Premium purchase on this account. Manage or change your plan from your App Store / Play Store subscriptions."
+    "You already have an active VMR-Lift purchase on this account. Manage or change your plan from your App Store / Play Store subscriptions."
   );
 }
 

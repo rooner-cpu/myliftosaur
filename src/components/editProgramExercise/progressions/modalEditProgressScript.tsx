@@ -85,3 +85,4 @@ export function ModalEditProgressScript(props: IModalEditProgressScriptProps): J
     </Modal>
   );
 }
+

@@ -183,3 +183,4 @@ export function TourModalContent(props: ITourModalProps): JSX.Element | null {
     </View>
   );
 }
+

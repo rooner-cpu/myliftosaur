@@ -18,7 +18,7 @@ export function IconEquipmentSmith(props: IIconEquipmentSmithProps): JSX.Element
       <Path d="M17.9814 2L17.9814 25" strokeWidth="1.5" strokeMiterlimit="10" />
       <Path
         d="M21.5 12L21.5 14L22.0949 14C22.3186 14 22.5 13.864 22.5 13.6962L22.5 12.3038C22.5 12.136 22.3186 12 22.0949 12L21.5 12Z"
-        fill="#FAF8FF"
+        fill="#EFF6FF"
         strokeWidth="1.5"
         strokeMiterlimit="10"
       />
@@ -29,7 +29,7 @@ export function IconEquipmentSmith(props: IIconEquipmentSmithProps): JSX.Element
       />
       <Path
         d="M2.5 12L2.5 14L1.90511 14C1.68138 14 1.5 13.864 1.5 13.6962L1.5 12.3038C1.5 12.136 1.68138 12 1.90511 12L2.5 12Z"
-        fill="#FAF8FF"
+        fill="#EFF6FF"
         strokeWidth="1.5"
         strokeMiterlimit="10"
       />
@@ -44,3 +44,4 @@ export function IconEquipmentSmith(props: IIconEquipmentSmithProps): JSX.Element
     </Svg>
   );
 }
+

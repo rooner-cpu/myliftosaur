@@ -32,3 +32,4 @@ export function InputWeightUnit(props: IInputWeightUnitProps): JSX.Element {
     </Pressable>
   );
 }
+

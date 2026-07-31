@@ -19,3 +19,4 @@ export function IconBarbell(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

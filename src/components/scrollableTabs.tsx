@@ -146,3 +146,4 @@ export function ScrollableTabs(props: IScrollableTabsProps): JSX.Element {
     </View>
   );
 }
+

@@ -28,3 +28,4 @@ export function DocDetailsContent(props: IDocDetailsContentProps): JSX.Element {
     </section>
   );
 }
+

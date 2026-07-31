@@ -218,3 +218,4 @@ export function useLineChartGestures(args: ILineChartGesturesArgs): ILineChartGe
 
   return { Wrap, frozen: false, clearFrozen: noopClearFrozen };
 }
+

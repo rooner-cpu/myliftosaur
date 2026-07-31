@@ -77,3 +77,4 @@ export function IconBarbell2Selected(props: IInnerProps): JSX.Element {
     </Svg>
   );
 }
+

@@ -66,3 +66,4 @@ export function ModalCouponContent(props: IModalCouponContentProps): JSX.Element
     </View>
   );
 }
+

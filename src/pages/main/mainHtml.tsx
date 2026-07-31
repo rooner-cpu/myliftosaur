@@ -13,17 +13,17 @@ interface IProps {
 export function MainHtml(props: IProps): JSX.Element {
   const { client, isLoggedIn, ...data } = props;
 
-  const title = "Liftosaur - Free Workout Tracker & Gym Planner App (iOS/Android)";
+  const title = "VMR-Lift - Free Workout Tracker & Gym Planner App (iOS/Android)";
   const description =
     "Free workout tracker & planner for iOS, Android & web. Build custom lifting programs with Liftoscript or use 50+ built-in routines like GZCLP, 5/3/1, PPL. Track progress with automatic progressive overload.";
 
   const jsonLd: IJsonLd[] = [
     {
       type: "SoftwareApplication",
-      name: "Liftosaur",
+      name: "VMR-Lift",
       applicationCategory: "HealthApplication",
       operatingSystem: "iOS, Android, Web",
-      url: "https://www.liftosaur.com",
+      url: "http://myliftosaur.local:8081",
       price: "0",
       priceCurrency: "USD",
       featureList:
@@ -40,8 +40,8 @@ export function MainHtml(props: IProps): JSX.Element {
       title={title}
       ogTitle={title}
       description={description}
-      canonical="https://www.liftosaur.com"
-      ogUrl="https://www.liftosaur.com"
+      canonical="http://myliftosaur.local:8081"
+      ogUrl="http://myliftosaur.local:8081"
       jsonLd={jsonLd}
       data={data}
       isLoggedIn={!!isLoggedIn}
@@ -53,3 +53,4 @@ export function MainHtml(props: IProps): JSX.Element {
     </Page>
   );
 }
+

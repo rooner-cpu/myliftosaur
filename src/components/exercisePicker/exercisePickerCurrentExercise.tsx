@@ -27,3 +27,4 @@ export function ExercisePickerCurrentExercise(props: IExercisePickerCurrentExerc
     </View>
   );
 }
+

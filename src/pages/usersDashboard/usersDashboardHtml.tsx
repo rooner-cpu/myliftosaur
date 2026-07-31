@@ -16,10 +16,10 @@ export function UsersDashboardHtml(props: IUsersDashboardHtmlProps): JSX.Element
       css={["usersdashboard"]}
       js={["usersdashboard"]}
       maxWidth={1300}
-      title="Users Dashboard | Liftosaur"
-      canonical="https://www.liftosaur.com/dashboards/users"
+      title="Users Dashboard | VMR-Lift"
+      canonical="http://myliftosaur.local:8081/dashboards/users"
       description="The dashboard to see users' activity"
-      ogUrl="https://www.liftosaur.com/dashboards/users"
+      ogUrl="http://myliftosaur.local:8081/dashboards/users"
       data={data}
       client={client}
     >
@@ -27,3 +27,4 @@ export function UsersDashboardHtml(props: IUsersDashboardHtmlProps): JSX.Element
     </Page>
   );
 }
+

@@ -11,9 +11,9 @@ export function HelpAccount(): JSX.Element {
         For now, we only support <Text className="text-sm font-bold">login via Google</Text>.
       </Text>
       <Text className="pb-2 text-sm">
-        After you log in, your data will be synced to the cloud, so even if you lose your phone, your progress won't be
-        lost.
+        After you log in, your workouts, programs, and settings are saved to your VMR-Lift account in the database.
       </Text>
     </View>
   );
 }
+

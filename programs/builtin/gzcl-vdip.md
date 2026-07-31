@@ -2,7 +2,7 @@
 id: gzcl-vdip
 name: "GZCL: VDIP"
 author: Cody Lefever
-url: "https://www.liftosaur.com/programs/gzcl-vdip"
+url: "http://myliftosaur.local:8081/programs/gzcl-vdip"
 shortDescription: Beginner-intermediate program where each set is AMRAP.
 isMultiweek: true
 tags: []
@@ -66,7 +66,7 @@ Again, this is just a brief description, and for full information and details, p
 
 Check the interactive playground below to see how the program works, and what the weights/sets/reps look like for each day. You can finish the sets, and see how the weight would be changed for the next workout.
 
-You can run GZCL: VDIP program in the Liftosaur app.
+You can run GZCL: VDIP program in the VMR-Lift app.
 
 <!-- faq -->
 
@@ -142,3 +142,4 @@ t2: Squat / ...t2
 t3: Lat Pulldown / ...t3
 t3: Bicep Curl, EZ Bar / ...t3
 ```
+

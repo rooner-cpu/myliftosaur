@@ -295,3 +295,4 @@ export function KeyboardRestTimer(): JSX.Element | null {
     </View>
   );
 }
+

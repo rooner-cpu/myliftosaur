@@ -203,3 +203,4 @@ export function ScreenEquipment(props: IProps): JSX.Element {
     </NavScreenContent>
   );
 }
+

@@ -194,3 +194,4 @@ export function WebWorkoutModals(props: IWebWorkoutModalsProps): JSX.Element {
     </>
   );
 }
+

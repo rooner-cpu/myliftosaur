@@ -23,3 +23,4 @@ export function InputWeightUnit(props: IInputWeightUnitProps): JSX.Element {
     </select>
   );
 }
+

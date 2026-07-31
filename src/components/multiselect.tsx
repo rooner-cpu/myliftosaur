@@ -95,3 +95,4 @@ export function Multiselect(props: IMultiselectProps): JSX.Element {
     </View>
   );
 }
+

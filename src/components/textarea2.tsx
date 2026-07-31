@@ -111,3 +111,4 @@ export const Textarea2 = forwardRef((props: IProps, ref: Ref<HTMLTextAreaElement
     </div>
   );
 });
+

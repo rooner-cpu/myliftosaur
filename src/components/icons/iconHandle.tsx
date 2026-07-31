@@ -13,3 +13,4 @@ export function IconHandle(): JSX.Element {
     </Svg>
   );
 }
+

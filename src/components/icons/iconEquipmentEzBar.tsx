@@ -19,7 +19,7 @@ export function IconEquipmentEzBar(props: IIconEquipmentEzBarProps): JSX.Element
       />
       <Path
         d="M5 8L5 16L3.21533 16C2.54413 16 2 15.4559 2 14.7847L2 9.21533C2 8.54413 2.54413 8 3.21533 8L5 8Z"
-        fill="#FAF8FF"
+        fill="#EFF6FF"
         strokeWidth="1.5"
         strokeMiterlimit="10"
       />
@@ -32,3 +32,4 @@ export function IconEquipmentEzBar(props: IIconEquipmentEzBarProps): JSX.Element
     </Svg>
   );
 }
+

@@ -110,7 +110,7 @@ export const programTourConfig: ITourConfig = {
             This defines Squat for 3 sets of 8 reps at 100lb, with linear progression adding 5lb when you hit all reps.
           </Text>
           <Text className={paraCn}>
-            <Link href="https://www.liftosaur.com/doc/liftoscript">Read the full Liftoscript docs</Link> to learn more.
+            <Link href="http://myliftosaur.local:8081/doc/liftoscript">Read the full Liftoscript docs</Link> to learn more.
           </Text>
         </>
       ),
@@ -177,3 +177,4 @@ export const programTourConfig: ITourConfig = {
     },
   ],
 };
+

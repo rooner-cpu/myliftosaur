@@ -78,3 +78,4 @@ function WorkoutPlatesCalculatorInner(props: IWorkoutPlatesCalculatorProps): JSX
 }
 
 export const WorkoutPlatesCalculator = memo(WorkoutPlatesCalculatorInner);
+

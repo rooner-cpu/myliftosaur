@@ -20,11 +20,11 @@ export function AffiliateDashboardHtml(props: IAffiliateDashboardHtmlProps): JSX
       css={["affiliatedashboard"]}
       js={["affiliatedashboard"]}
       maxWidth={1020}
-      title="Affiliate Dashboard | Liftosaur"
-      canonical={`https://www.liftosaur.com/dashboards/affiliate/${props.affiliateId}`}
-      ogTitle="Liftosaur: Affiliate Dashboard"
+      title="Affiliate Dashboard | VMR-Lift"
+      canonical={`http://myliftosaur.local:8081/dashboards/affiliate/${props.affiliateId}`}
+      ogTitle="VMR-Lift: Affiliate Dashboard"
       description="The dashboard to see users' activity came from affiliate"
-      ogUrl={`https://www.liftosaur.com/dashboards/affiliate/${props.affiliateId}`}
+      ogUrl={`http://myliftosaur.local:8081/dashboards/affiliate/${props.affiliateId}`}
       data={data}
       client={client}
     >
@@ -32,3 +32,4 @@ export function AffiliateDashboardHtml(props: IAffiliateDashboardHtmlProps): JSX
     </Page>
   );
 }
+

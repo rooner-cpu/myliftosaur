@@ -30,3 +30,4 @@ export function HelpMuscles(): JSX.Element {
     </View>
   );
 }
+

@@ -198,3 +198,4 @@ export function BottomSheetExerciseImageLibrary(props: IProps): JSX.Element {
     </BottomSheetOrModal>
   );
 }
+

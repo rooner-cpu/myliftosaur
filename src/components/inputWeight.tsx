@@ -150,3 +150,4 @@ export function InputWeight(props: IInputWeightProps): JSX.Element {
     </View>
   );
 }
+

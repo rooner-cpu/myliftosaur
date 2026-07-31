@@ -41,3 +41,4 @@ export function IconCheckCircle(props: IProps): JSX.Element {
     );
   }
 }
+

@@ -1,7 +1,7 @@
 ---
 date: "2023-07-09"
 title: Workout planner inspired by the software development tools
-og_title: Workout planner inspired by the software development tools | Liftosaur blog
+og_title: Workout planner inspired by the software development tools | VMR-Lift blog
 og_description: "Thoughts about building a weightlifting workout planner, which is inspired by the ideas from the software development tools"
 og_image: /images/workout-planner-hero.png
 tags: ["tech", "weightlifting"]
@@ -101,14 +101,15 @@ The main purpose of **Exercise stats** though is to show the week over week chan
 
 ## Progressive overload
 
-The workout planner wouldn't help with the progressive overload though. Its purpose is to define exercises, sets and reps for the workouts for all the weeks. Then, you would convert it into the Liftosaur's program, and open in the [Liftosaur's Web Editor (Program Buidler)](/program).
+The workout planner wouldn't help with the progressive overload though. Its purpose is to define exercises, sets and reps for the workouts for all the weeks. Then, you would convert it into the VMR-Lift's program, and open in the [VMR-Lift's Web Editor (Program Buidler)](/program).
 
 There, you'd add some kind of progressive overload to the exercises, and do final tweaks for your program. E.g. linear progression for novice program, or just adding weight at the end of mesocycle/macrocycle for intermediate/advanced program, adding double progression for isolates, tweaking warmups, etc.
 
-Then, you generate the link for the program, import it into Liftosaur app - and voila! You can now follow your program in the Liftosaur app!
+Then, you generate the link for the program, import it into VMR-Lift app - and voila! You can now follow your program in the VMR-Lift app!
 
-Each program in the workout planner has a unique URL (same as in Liftosaur programs), so you can bookmark it, and then open it later on again. This way, you can get back to your program, tweak it, maybe increase/decrease volume, maybe change exercises. You can also share it with other people if you want.
+Each program in the workout planner has a unique URL (same as in VMR-Lift programs), so you can bookmark it, and then open it later on again. This way, you can get back to your program, tweak it, maybe increase/decrease volume, maybe change exercises. You can also share it with other people if you want.
 
 ## Conclusion
 
 This IMHO could be a really useful tool to build your own weightlifting programs. What do you think?
+

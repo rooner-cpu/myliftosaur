@@ -106,3 +106,4 @@ export function Confetti(): JSX.Element {
     </View>
   );
 }
+

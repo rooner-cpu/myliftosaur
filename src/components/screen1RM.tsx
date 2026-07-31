@@ -149,3 +149,4 @@ export function Screen1RM(props: IScreen1RMProps): JSX.Element {
     </View>
   );
 }
+

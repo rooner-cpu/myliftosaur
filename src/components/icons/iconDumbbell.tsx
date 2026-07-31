@@ -43,3 +43,4 @@ export function IconDumbbell(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

@@ -13,7 +13,7 @@ export function HelpSettings(): JSX.Element {
       <Text className="pb-2 text-sm">
         Under <Text className="text-sm font-bold">Account</Text> section, you can go to the account screen, and log in
         there. For now, we only support <Text className="text-sm font-bold">login via Google</Text>. After you log in,
-        your data will be synced to the cloud, so even if you lose your phone, your progress won't be lost.
+        your data is saved to your VMR-Lift account in the database.
       </Text>
       <Text className="pb-2 text-sm">
         Make sure to set your <Text className="text-sm font-bold">Available Equipment</Text>. The plates you specify
@@ -36,3 +36,4 @@ export function HelpSettings(): JSX.Element {
     </View>
   );
 }
+

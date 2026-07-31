@@ -24,3 +24,4 @@ export function NavModalExercisePickerSettings(): JSX.Element {
     </FormSheet>
   );
 }
+

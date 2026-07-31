@@ -593,3 +593,4 @@ Squat / 2x3 71% / 180s
 Bench Press / 3x3 74% / 120s
 Deadlift / 1x3 71% / 180s
 ```
+

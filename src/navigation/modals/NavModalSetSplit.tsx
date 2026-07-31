@@ -36,3 +36,4 @@ export function NavModalSetSplit(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

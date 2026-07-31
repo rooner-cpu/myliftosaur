@@ -15,3 +15,4 @@ export function IconBack(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

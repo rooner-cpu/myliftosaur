@@ -41,3 +41,4 @@ export function IconTiktok(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

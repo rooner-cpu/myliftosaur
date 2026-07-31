@@ -144,3 +144,4 @@ export function NavModalSubscriptionInfo(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

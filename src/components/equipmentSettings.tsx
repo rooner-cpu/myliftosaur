@@ -636,3 +636,4 @@ function EquipmentSettingsPlates<T>(props: IEquipmentSettingsPlatesProps<T>): JS
     </View>
   );
 }
+

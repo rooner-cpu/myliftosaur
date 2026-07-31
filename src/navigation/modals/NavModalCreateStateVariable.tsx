@@ -102,3 +102,4 @@ export function NavModalCreateStateVariable(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

@@ -74,3 +74,4 @@ export function MainContent(props: IMainContentProps): JSX.Element {
     </div>
   );
 }
+

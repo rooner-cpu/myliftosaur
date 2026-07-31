@@ -48,3 +48,4 @@ function LockerInner(props: IProps): JSX.Element {
 }
 
 export const Locker = memo(LockerInner);
+

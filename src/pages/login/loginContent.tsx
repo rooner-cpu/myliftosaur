@@ -23,3 +23,4 @@ export function LoginContent(props: ILoginContentProps): JSX.Element {
     </div>
   );
 }
+

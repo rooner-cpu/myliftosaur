@@ -21,3 +21,4 @@ export function IconTimerSmall(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

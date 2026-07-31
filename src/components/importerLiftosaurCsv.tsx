@@ -42,7 +42,7 @@ export function ImporterLiftosaurCsv(props: IImporterLiftosaurCsvProps): JSX.Ele
           <View>
             <InternalLink
               name="download-example-csv"
-              href="https://www.liftosaur.com/liftosaur_example_csv.zip"
+              href="http://myliftosaur.local:8081/liftosaur_example_csv.zip"
               className="text-xs text-center font-bold underline text-text-link"
             >
               Download an example and instructions how to format a CSV file.
@@ -53,3 +53,4 @@ export function ImporterLiftosaurCsv(props: IImporterLiftosaurCsvProps): JSX.Ele
     </MenuItemWrapper>
   );
 }
+

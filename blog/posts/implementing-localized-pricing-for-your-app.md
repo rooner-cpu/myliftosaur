@@ -1,7 +1,7 @@
 ---
 date: "2024-08-26"
 title: Implementing localized pricing for your mobile app
-og_title: Implementing localized pricing for your mobile app | Liftosaur blog
+og_title: Implementing localized pricing for your mobile app | VMR-Lift blog
 og_image: /images/implementing-localized-pricing.jpg
 og_description: "How to implement fair localized prices for your mobile app, taking into account the purchasing power of your users"
 tags: ["tech"]

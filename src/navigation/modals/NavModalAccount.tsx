@@ -9,6 +9,8 @@ import { navigateToModal } from "../navigationService";
 import { Account_getFromStorage } from "../../models/account";
 import { IState } from "../../models/state";
 import { Thunk_pushScreen } from "../../ducks/thunks";
+import { Standalone_localMode } from "../../config/standalone";
+import { VmrAccountPanel } from "../../components/vmrAccountPanel";
 
 export function NavModalAccount(): JSX.Element {
   const { state, dispatch } = useAppState();
@@ -32,13 +34,17 @@ export function NavModalAccount(): JSX.Element {
   return (
     <ModalScreenContainer onClose={onClose} shouldShowClose={true}>
       <FormSheet>
-        <Account
-          account={account}
-          client={service.client}
-          dispatch={dispatch}
-          onSignIn={onSignIn}
-          onOpenEmailAuth={() => navigateToModal("emailAuthModal")}
-        />
+        {Standalone_localMode ? (
+          <VmrAccountPanel />
+        ) : (
+          <Account
+            account={account}
+            client={service.client}
+            dispatch={dispatch}
+            onSignIn={onSignIn}
+            onOpenEmailAuth={() => navigateToModal("emailAuthModal")}
+          />
+        )}
       </FormSheet>
     </ModalScreenContainer>
   );

@@ -886,3 +886,4 @@ export function PaymentsDashboardContent(props: IPaymentsDashboardContentProps):
     </section>
   );
 }
+

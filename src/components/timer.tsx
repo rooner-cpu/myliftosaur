@@ -62,3 +62,4 @@ export function Timer(props: IProps): JSX.Element {
     </View>
   );
 }
+

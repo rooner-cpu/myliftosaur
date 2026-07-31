@@ -29,3 +29,4 @@ export function NavModalImportFromLink(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

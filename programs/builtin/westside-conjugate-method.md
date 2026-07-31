@@ -288,3 +288,4 @@ de: Bench Press / 3x3 (Close), 3x3 (Med), 3x3 (Wide) / 65% / 60s
 de: Box Squat / 10x2 / 70% / 60s
 de: Deadlift / 6x1 / 75% / 60s
 ```
+

@@ -207,3 +207,4 @@ Bench Press[1-3] / 10x3 / 85% / 300s
 // **Rest 4-7 days**, then build to a new bench press 1RM. Set the weight you achieved and complete the set.
 Bench Press / 1x1 / 95% / 300s
 ```
+

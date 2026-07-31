@@ -115,3 +115,4 @@ export function ModalCreateStateVariable(props: IModalCreateStateVariableProps):
     </Modal>
   );
 }
+

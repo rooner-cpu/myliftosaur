@@ -209,3 +209,4 @@ Incline Curl / ...gvt / warmup: none / superset: a
 Reverse Fly / 3x8 / 10lb / 60s / warmup: none / progress: dp(2.5lb, 8, 10) / superset: b
 Lateral Raise / 3x10 / 10lb / 60s / warmup: none / progress: dp(2.5lb, 10, 12) / superset: b
 ```
+

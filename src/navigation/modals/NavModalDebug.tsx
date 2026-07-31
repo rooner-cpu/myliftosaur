@@ -255,3 +255,4 @@ export function NavModalDebug(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

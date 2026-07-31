@@ -101,3 +101,4 @@ export function GroupHeader(props: IProps): JSX.Element {
     </Fragment>
   );
 }
+

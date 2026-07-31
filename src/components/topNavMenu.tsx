@@ -4,17 +4,9 @@ import { Account } from "./account";
 import { IconUser } from "./icons/iconUser";
 import { IAccount } from "../models/account";
 import { Modal } from "./modal";
-import { IconReddit } from "./icons/iconReddit";
-import { IconDiscord } from "./icons/iconDiscord";
 import { IconClose } from "./icons/iconClose";
-import { IconApple } from "./icons/iconApple";
-import { Onelink } from "./onelink";
-import { IconInstagramFlat } from "./icons/iconInstagramFlat";
-import { IconYoutube } from "./icons/iconYoutube";
-import { IconGooglePlay } from "./icons/iconGooglePlay";
 import { IconSpinner } from "./icons/iconSpinner";
 import { Tailwind_semantic } from "../utils/tailwindConfig";
-import { track } from "../utils/posthog";
 
 export function TopNavMenu(props: {
   client: Window["fetch"];
@@ -40,12 +32,12 @@ export function TopNavMenu(props: {
                 <img
                   className="inline align-middle"
                   style={{ width: "2.5rem", height: "2.5rem" }}
-                  src="/images/icon.svg"
-                  alt="Liftosaur Logo"
+                  src="/images/vmr-lift-logo.webp"
+                  alt="VMR-Lift Logo"
                 />
               </a>
             </div>
-            <div className={`text-xl font-bold ${props.isWhite ? "text-text-alwayswhite" : ""}`}>Liftosaur</div>
+            <div className={`text-xl font-bold ${props.isWhite ? "text-text-alwayswhite" : ""}`}>VMR-Lift</div>
           </div>
           {props.mobileRight}
           <div>
@@ -69,12 +61,12 @@ export function TopNavMenu(props: {
                       <img
                         className="inline align-middle"
                         style={{ width: "2.5rem", height: "2.5rem" }}
-                        src="/images/icon.svg"
-                        alt="Liftosaur Logo"
+                        src="/images/vmr-lift-logo.webp"
+                        alt="VMR-Lift Logo"
                       />
                     </a>
                   </div>
-                  <div className="text-xl font-bold">Liftosaur</div>
+                  <div className="text-xl font-bold">VMR-Lift</div>
                 </div>
                 <button className="p-2" onClick={() => setIsMenuOpen(false)}>
                   <IconClose size={20} color={Tailwind_semantic().text.primary} />
@@ -110,39 +102,8 @@ export function TopNavMenu(props: {
                   </button>
                 )}
               </div>
-              <div className="flex flex-col gap-3 mb-8">
-                <Onelink
-                  className="flex items-center gap-3 text-text-primary no-underline"
-                  onClick={() => track({ redditname: "Lead", googlename: "outbound_click" })}
-                >
-                  <IconApple color={Tailwind_semantic().text.primary} />
-                  <span className="text-base">App Store</span>
-                </Onelink>
-                <Onelink
-                  type="android"
-                  target="_blank"
-                  className="flex items-center gap-3 text-text-primary no-underline"
-                  onClick={() => track({ redditname: "Lead", googlename: "outbound_click" })}
-                >
-                  <IconGooglePlay size={20} color={Tailwind_semantic().text.primary} />
-                  <span className="text-base">Google Play</span>
-                </Onelink>
-              </div>
-              <div className="pt-6 border-t border-border-neutral">
-                <div className="flex items-center justify-center gap-5">
-                  <a href="https://www.instagram.com/liftosaurapp" target="_blank">
-                    <IconInstagramFlat size={24} color={Tailwind_semantic().text.primary} />
-                  </a>
-                  <a href="https://x.com/liftosaur" target="_blank">
-                    <IconYoutube size={24} color={Tailwind_semantic().text.primary} />
-                  </a>
-                  <a href="https://www.reddit.com/r/liftosaur" target="_blank">
-                    <IconReddit size={24} color={Tailwind_semantic().text.primary} />
-                  </a>
-                  <a href="https://discord.gg/AAh3cvdBRs" target="_blank">
-                    <IconDiscord size={24} color={Tailwind_semantic().text.primary} />
-                  </a>
-                </div>
+              <div className="pt-6 text-sm border-t border-border-neutral text-text-secondary">
+                A workout planner and progression tracker for serious lifters.
               </div>
             </div>
           </div>
@@ -199,11 +160,11 @@ function DesktopNav(props: IDesktopNavProps): JSX.Element {
             <img
               className="inline align-middle"
               style={{ width: "100%", height: "100%" }}
-              src="/images/icon.svg"
-              alt="Liftosaur Logo"
+              src="/images/vmr-lift-logo.webp"
+              alt="VMR-Lift Logo"
             />
           </div>
-          <span className="text-xl font-bold">Liftosaur</span>
+          <span className="text-xl font-bold">VMR-Lift</span>
         </a>
         <div className="flex items-center gap-4">
           <ul className="flex flex-wrap items-center justify-end leading-none list-none gap-x-4">
@@ -228,27 +189,6 @@ function DesktopNav(props: IDesktopNavProps): JSX.Element {
           </ul>
           <div className="bg-border-prominent" style={{ width: "1px", height: "1.5rem" }} />
           <div className="flex items-center gap-4 shrink-0">
-            <a href="https://www.instagram.com/liftosaurapp" target="_blank">
-              <IconInstagramFlat
-                color={props.isWhite ? Tailwind_semantic().icon.white : Tailwind_semantic().text.primary}
-              />
-            </a>
-            <a href="https://www.youtube.com/@Liftosaur" target="_blank">
-              <IconYoutube
-                color={props.isWhite ? Tailwind_semantic().icon.white : Tailwind_semantic().text.primary}
-                secondaryColor={props.isWhite ? Tailwind_semantic().icon.purple : Tailwind_semantic().icon.white}
-              />
-            </a>
-            <a href="https://www.reddit.com/r/liftosaur" target="_blank">
-              <IconReddit
-                color={props.isWhite ? Tailwind_semantic().icon.white : Tailwind_semantic().text.primary}
-                secondaryColor={props.isWhite ? Tailwind_semantic().icon.purple : Tailwind_semantic().icon.white}
-              />
-            </a>
-            <a href="https://discord.gg/AAh3cvdBRs" target="_blank">
-              <IconDiscord color={props.isWhite ? Tailwind_semantic().icon.white : Tailwind_semantic().text.primary} />
-            </a>
-            <div className="bg-border-prominent" style={{ width: "1px", height: "1.5rem" }} />
             {props.isLoggedIn ? (
               <button onClick={() => props.onAccountClick()} className="p-1">
                 <IconUser size={20} color={Tailwind_semantic().icon.green} />
@@ -289,3 +229,5 @@ function ModalAccount(props: IModalAccountProps): JSX.Element {
     </Modal>
   );
 }
+
+

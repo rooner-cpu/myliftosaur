@@ -20,3 +20,4 @@ export function NavModalGraphs(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

@@ -44,3 +44,4 @@ export function NavModalNewGym(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

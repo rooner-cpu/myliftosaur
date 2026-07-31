@@ -178,3 +178,4 @@ export function RepMaxCalculator(props: IRepMaxCalculatorProps): JSX.Element {
     </View>
   );
 }
+

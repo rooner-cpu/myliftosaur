@@ -47,3 +47,4 @@ export function ModalNewGymContent(props: IProps): JSX.Element {
     </View>
   );
 }
+

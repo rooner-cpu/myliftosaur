@@ -23,3 +23,4 @@ export function IconEquipmentKettlebell(props: IIconEquipmentKettlebellProps): J
     </Svg>
   );
 }
+

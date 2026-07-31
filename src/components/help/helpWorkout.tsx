@@ -50,3 +50,4 @@ export function HelpWorkout(): JSX.Element {
     </View>
   );
 }
+

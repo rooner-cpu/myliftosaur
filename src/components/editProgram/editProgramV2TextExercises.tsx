@@ -108,3 +108,4 @@ export function EditProgramV2TextExercises(props: IEditProgramV2TextExercisesPro
     </View>
   );
 }
+

@@ -100,3 +100,4 @@ export function Modal(props: IProps): JSX.Element {
 
   return containerRef ? createPortal(element, containerRef) : element;
 }
+

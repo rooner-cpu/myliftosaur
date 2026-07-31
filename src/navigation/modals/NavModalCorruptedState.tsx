@@ -73,7 +73,7 @@ export function NavModalCorruptedState(): JSX.Element {
         <View className="pb-4">
           <Text>
             Please contact the developer of this app, and he is going to look into this ASAP. You can contact us at{" "}
-            <Link href="mailto:info@liftosaur.com">info@liftosaur.com</Link>.
+            <Link href="mailto:rooner@gmail.com">rooner@gmail.com</Link>.
           </Text>
         </View>
         <View className="pb-4">
@@ -97,3 +97,5 @@ export function NavModalCorruptedState(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+
+

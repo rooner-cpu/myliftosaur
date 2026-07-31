@@ -30,3 +30,4 @@ export function IconFullTextMode(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

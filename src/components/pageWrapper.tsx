@@ -60,3 +60,4 @@ export function PageWrapper(props: IPageWrapperProps): JSX.Element {
     </div>
   );
 }
+

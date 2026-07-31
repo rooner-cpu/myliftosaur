@@ -23,3 +23,4 @@ export function IconEquipmentTrapbar(props: IIconEquipmentTrapbarProps): JSX.Ele
     </Svg>
   );
 }
+

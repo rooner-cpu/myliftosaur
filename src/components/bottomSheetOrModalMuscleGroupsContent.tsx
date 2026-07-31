@@ -64,3 +64,4 @@ export function BottomSheetOrModalMuscleGroupsContent(props: IBottomSheetOrModal
     </BottomSheetOrModal>
   );
 }
+

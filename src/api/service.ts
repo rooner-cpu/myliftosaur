@@ -899,12 +899,12 @@ export class Service {
   }
 
   public async programsIndex(): Promise<IProgramIndexEntry[]> {
-    const response = await this.client(`${__HOST__}/programdata/index.json?v=${__COMMIT_HASH__}`);
+    const response = await this.client(`/programdata/index.json?v=${__COMMIT_HASH__}`);
     return response.json();
   }
 
   public async programDetail(id: string, category: string = "builtin"): Promise<IProgramDetail> {
-    const response = await this.client(`${__HOST__}/programdata/programs/${category}/${id}.json?v=${__COMMIT_HASH__}`);
+    const response = await this.client(`/programdata/programs/${category}/${id}.json?v=${__COMMIT_HASH__}`);
     return response.json();
   }
 

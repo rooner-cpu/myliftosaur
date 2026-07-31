@@ -249,3 +249,4 @@ hyp: Triceps Extension / 3x8 / 20lb / 90s / progress: dp(5lb, 8, 12)
 hyp: Triceps Pushdown / 2x12 / 40lb / 60s / progress: dp(5lb, 12, 15)
 hyp: Cable Kickback / 2x15 / 10lb / 60s / progress: dp(5lb, 15, 20)
 ```
+

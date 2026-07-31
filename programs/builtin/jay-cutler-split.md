@@ -271,3 +271,4 @@ Hip Adductor / 3x10 / 80lb / 60s / progress: dp(5lb, 10, 12)
 Standing Calf Raise / 3x12 / 90lb / 60s
 Seated Calf Raise / 3x12 / 70lb / 60s
 ```
+

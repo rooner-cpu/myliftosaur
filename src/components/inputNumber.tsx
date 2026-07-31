@@ -92,3 +92,4 @@ export function InputNumber(props: IInputNumberProps): JSX.Element {
     </View>
   );
 }
+

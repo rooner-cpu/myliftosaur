@@ -157,7 +157,7 @@ export function ImportFromLiftosaur_convertLiftosaurCsvToHistoryRecords(
   }
   if (kind !== "liftosaur") {
     throw new ImportFileError(
-      "This doesn't look like a Liftosaur history CSV - the header row doesn't match the format of " +
+      "This doesn't look like a VMR-Lift history CSV - the header row doesn't match the format of " +
         '"Export history to CSV file".'
     );
   }
@@ -184,7 +184,7 @@ export function ImportFromLiftosaur_convertLiftosaurCsvToHistoryRecords(
   }
   if (validRecords.length < liftosaurRecords.length / 2) {
     throw new ImportFileError(
-      `${errors.length} of ${liftosaurRecords.length} rows failed to parse - this doesn't look like a valid Liftosaur history CSV.`
+      `${errors.length} of ${liftosaurRecords.length} rows failed to parse - this doesn't look like a valid VMR-Lift history CSV.`
     );
   }
 

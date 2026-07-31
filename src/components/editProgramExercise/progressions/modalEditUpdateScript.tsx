@@ -87,3 +87,4 @@ export function ModalEditUpdateScript(props: IModalEditUpdateScriptProps): JSX.E
     </Modal>
   );
 }
+

@@ -162,3 +162,4 @@ Lat Pulldown / 1x6 / 70lb / warmup: none / progress: dp(5lb, 6, 10)
 Deadlift / 1x5 / 185lb / progress: dp(10lb, 5, 8)
 Triceps Dip / 1x6 / 0lb / warmup: none / progress: dp(5lb, 6, 10)
 ```
+

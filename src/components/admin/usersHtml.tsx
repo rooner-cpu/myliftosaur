@@ -13,3 +13,4 @@ export function renderUsersHtml(data: IProps): string {
     </AdminHtml>
   );
 }
+

@@ -266,3 +266,4 @@ export function NavModalPlaygroundEditExercise(): JSX.Element {
   }
   return <NavModalPlaygroundEditExercisePlayground weekIndex={params.weekIndex} dayIndex={params.dayIndex} />;
 }
+

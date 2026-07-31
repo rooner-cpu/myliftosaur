@@ -45,3 +45,4 @@ export function NavModalCustomExercise(): JSX.Element {
     </SheetScreenContainer>
   );
 }
+

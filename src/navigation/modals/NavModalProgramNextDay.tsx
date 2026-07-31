@@ -64,3 +64,4 @@ export function NavModalProgramNextDay(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

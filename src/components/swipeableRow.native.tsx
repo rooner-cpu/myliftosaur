@@ -88,3 +88,4 @@ export function SwipeableRow(props: ISwipeableRowProps): JSX.Element {
     </View>
   );
 }
+

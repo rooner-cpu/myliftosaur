@@ -217,3 +217,4 @@ function EventView(props: IEventViewProps): JSX.Element | null {
   }
   return null;
 }
+

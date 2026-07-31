@@ -23,3 +23,4 @@ export function IconQuestion(props: IProps): JSX.Element {
     </svg>
   );
 }
+

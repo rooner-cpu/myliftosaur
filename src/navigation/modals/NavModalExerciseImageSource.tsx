@@ -100,3 +100,4 @@ export function NavModalExerciseImageSource(): JSX.Element {
     </SheetScreenContainer>
   );
 }
+

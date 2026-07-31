@@ -185,3 +185,4 @@ Seated Leg Curl / 3x10 / 60lb / 60s / progress: dp(5lb, 10, 15)
 Seated Calf Raise / 3x8 / 70lb / 60s / progress: dp(5lb, 8, 12)
 Calf Press on Leg Press / 3x8 / 150lb / 60s / progress: dp(5lb, 8, 12)
 ```
+

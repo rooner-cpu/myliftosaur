@@ -365,3 +365,4 @@ function ProgressContent(props: IProgressContentProps): JSX.Element {
     </>
   );
 }
+

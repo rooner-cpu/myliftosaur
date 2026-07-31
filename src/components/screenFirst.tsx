@@ -8,14 +8,14 @@ import { Button } from "./button";
 import { IconArrowRight } from "./icons/iconArrowRight";
 import StorySlider from "./storySlider";
 import { IconKettlebell } from "./icons/iconKettlebell";
-import { Svg, Defs, LinearGradient, Stop, Rect, SvgXml } from "./primitives/svg";
+import { Svg, Defs, LinearGradient, Stop, Rect } from "./primitives/svg";
 import { Tailwind_colors } from "../utils/tailwindConfig";
 import { IconWorkoutProgress } from "./icons/iconWorkoutProgress";
 import { IconEditor } from "./icons/iconEditor";
 import { IconTracker } from "./icons/iconTracker";
 import { ImagePreloader_preload } from "../utils/imagePreloader";
 import { navigateToModal } from "../navigation/navigationService";
-import { BundledImages_resolve, BundledImages_svgXml } from "../utils/bundledImages";
+import { BundledImages_resolve } from "../utils/bundledImages";
 
 interface IProps {
   dispatch: IDispatch;
@@ -181,21 +181,12 @@ function FirstSlide(): JSX.Element {
         Build any weightlifting program using a simple scripting language and track your progress.
       </Text>
       <View className="flex-1 w-full overflow-hidden">
-        {Platform.OS === "web" ? (
-          <Image
-            source={{ uri: "/images/logo.svg" }}
-            className="w-full h-full"
-            resizeMode="contain"
-            style={{ alignSelf: "flex-end" }}
-          />
-        ) : (
-          <SvgXml
-            xml={BundledImages_svgXml("/images/logo.svg") ?? ""}
-            width="100%"
-            height="100%"
-            preserveAspectRatio="xMidYMax meet"
-          />
-        )}
+        <Image
+          source={BundledImages_resolve("/images/vmr-lift-logo.webp")}
+          className="w-full h-full"
+          resizeMode="contain"
+          style={{ alignSelf: "flex-end" }}
+        />
       </View>
     </View>
   );
@@ -240,3 +231,4 @@ function RestSlide(props: IRestSlideProps): JSX.Element {
     </View>
   );
 }
+

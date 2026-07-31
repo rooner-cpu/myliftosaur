@@ -125,3 +125,4 @@ export function NavScreenProgramPreviewOnboarding(): JSX.Element {
     </NavScreenContent>
   );
 }
+

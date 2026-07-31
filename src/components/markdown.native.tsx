@@ -19,3 +19,4 @@ export function Markdown(props: IProps): JSX.Element {
   const stringValue = typeof props.value === "string" ? props.value : String(props.value ?? "");
   return <SimpleMarkdown value={stringValue} className={props.className} />;
 }
+

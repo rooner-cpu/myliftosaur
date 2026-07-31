@@ -14,16 +14,16 @@ export function RecordHtml({
   recordId: number;
   client: Window["fetch"];
 }): JSX.Element {
-  const url = `https://www.liftosaur.com/record?user=${userId}&id=${recordId}`;
+  const url = `http://myliftosaur.local:8081/record?user=${userId}&id=${recordId}`;
   return (
     <Page
       css={["main", "record"]}
       js={["record"]}
-      title="Workout summary | Liftosaur"
+      title="Workout summary | VMR-Lift"
       description="Workout summary - what exercises were done, with what sets, reps, weights, new personal records."
       canonical={url}
       ogUrl={url}
-      ogImage={`https://www.liftosaur.com/recordimage?user=${userId}&id=${recordId}`}
+      ogImage={`http://myliftosaur.local:8081/recordimage?user=${userId}&id=${recordId}`}
       data={data}
       client={client}
     >
@@ -31,3 +31,4 @@ export function RecordHtml({
     </Page>
   );
 }
+

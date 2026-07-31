@@ -52,3 +52,4 @@ export function NavModalNewEquipment(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

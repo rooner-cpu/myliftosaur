@@ -29,3 +29,4 @@ export function IconWorkoutProgress(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

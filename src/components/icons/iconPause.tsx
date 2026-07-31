@@ -19,3 +19,4 @@ export function IconPause(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

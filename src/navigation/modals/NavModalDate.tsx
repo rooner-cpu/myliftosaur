@@ -45,3 +45,4 @@ export function NavModalDate(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

@@ -1,8 +1,8 @@
 ---
 date: "2024-01-04"
 title: Combine Workout Planner and Liftoscript
-og_title: Combine Workout Planner and Liftoscript | Liftosaur blog
-og_description: Integrating Liftoscript into Workout Planner syntax to make the planner as powerful as a regular Liftosaur editor
+og_title: Combine Workout Planner and Liftoscript | VMR-Lift blog
+og_description: Integrating Liftoscript into Workout Planner syntax to make the planner as powerful as a regular VMR-Lift editor
 og_image: /images/combine-workout-planner-and-liftoscript-intro.jpg
 tags: ["weightlifting", "tech"]
 reddit: https://www.reddit.com/r/liftosaur/comments/18zc357/blogpost_combine_workout_planner_and_liftoscript/
@@ -11,7 +11,7 @@ reddit: https://www.reddit.com/r/liftosaur/comments/18zc357/blogpost_combine_wor
 <div><img src="../../images/combine-workout-planner-and-liftoscript-intro.jpg" width="100%" alt="Midjourney generated book and some barbell plates" /></div>
 <div class="subscription">This is what Midjourney thinks a good illustration for the post. Who am I to argue with AI overlords?</div>
 
-I recently added "Full Program" mode to the [Workout Planner](https://www.liftosaur.com/planner). Now you can edit a whole
+I recently added "Full Program" mode to the [Workout Planner](http://myliftosaur.local:8081/planner). Now you can edit a whole
 weightlifting program as just one text file.
 
 And this is so cool! Making weightlifting programs was never easier and faster. But I still have to fall back to a regular
@@ -171,7 +171,7 @@ Note that reusing exercises can define their values for the state variables via 
 
 And that's it! That pretty much would be the whole GZCLP program, with all the autoincrements, changing stages on failures, and all the proper logic for T1s, T2s and T3s.
 
-All that stuff makes the Workout Planner pretty much as powerful as the regular Liftosaur's program editor. And a big advantage is that you don't really need to know/use all of that, you still can do simple programs like:
+All that stuff makes the Workout Planner pretty much as powerful as the regular VMR-Lift's program editor. And a big advantage is that you don't really need to know/use all of that, you still can do simple programs like:
 
 {% plannercode %}
 Squat / 5x5
@@ -187,3 +187,4 @@ when people open e.g. built-in GZCLP program to tweak it, and see that blob of c
 But IMHO that's a step in the right direction, and would unlock a lot of potential.
 
 What do you think? Would love to hear your thoughts on that! Please comment on Reddit what do you think about it!
+

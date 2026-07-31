@@ -45,3 +45,4 @@ export function IconHomeSelected(props: IInnerProps): JSX.Element {
     </Svg>
   );
 }
+

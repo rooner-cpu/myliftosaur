@@ -151,3 +151,4 @@ export function PersonalRecords(props: IPersonalRecordsProps): JSX.Element {
     </View>
   );
 }
+

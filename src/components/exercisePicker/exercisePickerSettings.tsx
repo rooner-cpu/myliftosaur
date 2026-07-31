@@ -55,3 +55,4 @@ export function ExercisePickerSettings(props: IProps): JSX.Element {
     </View>
   );
 }
+

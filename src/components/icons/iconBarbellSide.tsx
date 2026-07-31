@@ -22,3 +22,4 @@ export function IconBarbellSide(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

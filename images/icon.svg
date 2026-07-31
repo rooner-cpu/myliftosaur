@@ -1,8 +1,8 @@
 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g clip-path="url(#clip0_178_2507)">
-<rect width="64" height="64" fill="#8356F6"/>
+<rect width="64" height="64" fill="#3078C8"/>
 <g clip-path="url(#clip1_178_2507)">
-<path d="M63.985 0H0V63.985H63.985V0Z" fill="#8356F6"/>
+<path d="M63.985 0H0V63.985H63.985V0Z" fill="#3078C8"/>
 <mask id="mask0_178_2507" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
 <path d="M63.985 0H0V63.985H63.985V0Z" fill="white"/>
 </mask>

@@ -55,3 +55,4 @@ export function ModalPlatesContent(props: IProps): JSX.Element {
     </View>
   );
 }
+

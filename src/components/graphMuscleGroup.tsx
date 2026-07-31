@@ -102,3 +102,4 @@ function GraphMuscleGroupInner(props: IGraphMuscleGroupProps): JSX.Element {
 }
 
 export const GraphMuscleGroup = memo(GraphMuscleGroupInner);
+

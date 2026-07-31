@@ -51,3 +51,4 @@ export function NavModalWeekInsightsDetails(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

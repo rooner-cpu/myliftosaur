@@ -25,3 +25,4 @@ export function IconCalendarSmall(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

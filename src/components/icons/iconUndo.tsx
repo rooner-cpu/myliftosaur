@@ -22,3 +22,4 @@ export function IconUndo(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

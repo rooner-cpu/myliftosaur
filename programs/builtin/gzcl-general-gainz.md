@@ -2,7 +2,7 @@
 id: gzcl-general-gainz
 name: "GZCL: General Gainz"
 author: Cody Lefever
-url: "https://www.liftosaur.com/programs/gzcl-general-gainz"
+url: "http://myliftosaur.local:8081/programs/gzcl-general-gainz"
 shortDescription: Latest GZCL program combining learnings from all other GZCL programs.
 isMultiweek: true
 tags: []
@@ -74,7 +74,7 @@ Again, this is just a brief description, and for full information and details, p
 
 Check the interactive playground below to see how the program works, and what the weights/sets/reps look like for each day. You can simulate doing RM, and then singles or half-sets after, etc.
 
-You can run the GZCL: General Gainz program in the Liftosaur app.
+You can run the GZCL: General Gainz program in the VMR-Lift app.
 
 <!-- faq -->
 
@@ -178,3 +178,4 @@ t3: Bicep Curl / ...t3
 // ...t3
 t3: Skullcrusher / ...t3
 ```
+

@@ -35,3 +35,4 @@ export function HelpPlates(): JSX.Element {
     </View>
   );
 }
+

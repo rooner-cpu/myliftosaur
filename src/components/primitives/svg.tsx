@@ -163,3 +163,4 @@ export function SvgUri(props: ISvgUriProps): React.JSX.Element {
     alt: "",
   });
 }
+

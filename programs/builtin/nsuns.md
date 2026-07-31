@@ -220,3 +220,4 @@ Bench Press Close Grip / ...t2_upper
 Triceps Pushdown / 3x8 40lb / warmup: none / progress: dp(5lb, 8, 12)
 Hammer Curl / 4x8 25lb / warmup: none / progress: dp(5lb, 8, 12)
 ```
+

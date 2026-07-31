@@ -787,3 +787,4 @@ function WorkoutExerciseE1RMSet(props: IWorkoutExerciseE1RMSetProps): JSX.Elemen
     />
   );
 }
+

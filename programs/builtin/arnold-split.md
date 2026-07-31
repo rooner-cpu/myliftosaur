@@ -224,3 +224,4 @@ Stiff Leg Deadlift / 3x10 / 135lb / 90s
 Standing Calf Raise / 4x12 / 90lb / 60s / warmup: none
 Hanging Leg Raise / 3x10 / 0lb / 60s / warmup: none
 ```
+

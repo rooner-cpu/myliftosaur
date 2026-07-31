@@ -76,3 +76,4 @@ export function NavModalProgramPreviewMuscles(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

@@ -70,3 +70,4 @@ export function ExerciseRM(props: IExerciseRMProps): JSX.Element {
     </View>
   );
 }
+

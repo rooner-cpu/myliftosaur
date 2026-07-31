@@ -33,3 +33,4 @@ export function IconW(props: IIconWProps): JSX.Element {
     </Svg>
   );
 }
+
