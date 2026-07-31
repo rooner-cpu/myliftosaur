@@ -30,3 +30,4 @@ export function IconUiMode(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

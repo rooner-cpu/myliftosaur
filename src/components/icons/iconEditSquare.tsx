@@ -26,3 +26,4 @@ export function IconEditSquare(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

@@ -52,3 +52,4 @@ export function HelpGraphs(): JSX.Element {
     </View>
   );
 }
+

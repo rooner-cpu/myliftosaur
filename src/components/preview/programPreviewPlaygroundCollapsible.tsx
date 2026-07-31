@@ -191,3 +191,4 @@ function PagerTabItemText(props: {
   }));
   return <Animated.Text style={[{ fontFamily: "Poppins", fontSize: 16 }, textStyle]}>{props.name}</Animated.Text>;
 }
+

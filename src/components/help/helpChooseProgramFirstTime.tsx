@@ -27,3 +27,4 @@ export function HelpChooseProgramFirstTime(): JSX.Element {
     </View>
   );
 }
+

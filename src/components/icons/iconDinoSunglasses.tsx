@@ -273,3 +273,4 @@ export function IconDinoSunglasses(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

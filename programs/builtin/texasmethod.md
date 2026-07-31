@@ -210,3 +210,4 @@ Squat / 1x5 / 85% / 300s
 Overhead Press / 1x5 / 85% / 300s
 Clean / 5x3 / 70% / 120s
 ```
+

@@ -1,4 +1,5 @@
-import { ISubscription } from "../types";
+import { ISubscription } from "../types";
+import { Standalone_localMode } from "../config/standalone";
 import { IIapActiveSubscription } from "./iapAdapter";
 import { Subscriptions_hasSubscription } from "./subscriptions";
 
@@ -44,7 +45,11 @@ export function SubscriptionPlan_derive(args: {
 }): IDerivedSubscriptionPlan {
   const { subscription, status, ownedLifetime, isNative, isIos } = args;
 
-  if (subscription.key && subscription.key !== "unclaimed") {
+  
+  if (Standalone_localMode) {
+    return { state: "freeaccess" };
+  }
+if (subscription.key && subscription.key !== "unclaimed") {
     return { state: "freeaccess" };
   }
 
@@ -93,3 +98,4 @@ export function SubscriptionPlan_derive(args: {
 
   return { state: "none" };
 }
+

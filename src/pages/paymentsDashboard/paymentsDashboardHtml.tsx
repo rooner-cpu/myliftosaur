@@ -25,10 +25,10 @@ export function PaymentsDashboardHtml(props: IPaymentsDashboardHtmlProps): JSX.E
       css={["paymentsdashboard"]}
       js={["paymentsdashboard"]}
       maxWidth={1300}
-      title="Payments Dashboard | Liftosaur"
-      canonical="https://www.liftosaur.com/dashboards/payments"
+      title="Payments Dashboard | VMR-Lift"
+      canonical="http://myliftosaur.local:8081/dashboards/payments"
       description="The dashboard to see all payments"
-      ogUrl="https://www.liftosaur.com/dashboards/payments"
+      ogUrl="http://myliftosaur.local:8081/dashboards/payments"
       data={data}
       client={client}
     >
@@ -36,3 +36,4 @@ export function PaymentsDashboardHtml(props: IPaymentsDashboardHtmlProps): JSX.E
     </Page>
   );
 }
+

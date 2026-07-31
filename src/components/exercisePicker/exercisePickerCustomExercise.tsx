@@ -100,3 +100,4 @@ export function ExercisePickerCustomExercise(props: IExercisePickerCustomExercis
     </View>
   );
 }
+

@@ -395,3 +395,4 @@ export function AppNavigator(props: { initialScreen?: IScreen }): JSX.Element {
     </InitialScreenContext.Provider>
   );
 }
+

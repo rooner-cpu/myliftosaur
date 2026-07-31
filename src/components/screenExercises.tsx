@@ -30,3 +30,4 @@ export function ScreenExercises(props: IProps): JSX.Element {
     </View>
   );
 }
+

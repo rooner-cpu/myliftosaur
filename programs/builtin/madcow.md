@@ -192,3 +192,4 @@ Bench Press / ...main[3]
 Bent Over Row / ...main[3]
 Hammer Curl / 3x8-12 / progress: lp(5lb)
 ```
+

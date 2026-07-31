@@ -23,3 +23,4 @@ export function IconFilter2(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

@@ -22,3 +22,4 @@ export function IconEdit2(props: IIconEdit2Props): JSX.Element {
     </Svg>
   );
 }
+

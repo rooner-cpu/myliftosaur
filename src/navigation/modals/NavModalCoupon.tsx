@@ -21,3 +21,4 @@ export function NavModalCoupon(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

@@ -53,3 +53,4 @@ function IconDoc2Selected(props: IInnerProps): JSX.Element {
     </Svg>
   );
 }
+

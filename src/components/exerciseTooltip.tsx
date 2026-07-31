@@ -140,3 +140,4 @@ export function ExerciseTooltip(props: {
     </span>
   );
 }
+

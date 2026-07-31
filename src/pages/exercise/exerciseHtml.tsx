@@ -18,8 +18,8 @@ export function ExerciseHtml(props: IProps): JSX.Element {
   const { client, id, isLoggedIn, ...data } = props;
   const exercise = Exercise_get(data.exerciseType, {});
   const name = Exercise_reverseName(exercise);
-  const title = `${name} - How To, Muscles Worked & Form Guide | Liftosaur`;
-  const url = `https://www.liftosaur.com/exercises/${id}`;
+  const title = `${name} - How To, Muscles Worked & Form Guide | VMR-Lift`;
+  const url = `http://myliftosaur.local:8081/exercises/${id}`;
 
   const key = Exercise_toKey(data.exerciseType).toLowerCase();
   const entry = exerciseDescriptions[key];
@@ -31,8 +31,8 @@ export function ExerciseHtml(props: IProps): JSX.Element {
     {
       type: "BreadcrumbList",
       items: [
-        { name: "Home", url: "https://www.liftosaur.com" },
-        { name: "Exercises", url: "https://www.liftosaur.com/exercises" },
+        { name: "Home", url: "http://myliftosaur.local:8081" },
+        { name: "Exercises", url: "http://myliftosaur.local:8081/exercises" },
         { name },
       ],
     },
@@ -69,7 +69,7 @@ export function ExerciseHtml(props: IProps): JSX.Element {
       description={description}
       ogUrl={url}
       ogDescription={description}
-      ogImage={`https://www.liftosaur.com${ExerciseImageUtils_ogImageUrl(data.exerciseType)}`}
+      ogImage={`http://myliftosaur.local:8081${ExerciseImageUtils_ogImageUrl(data.exerciseType)}`}
       jsonLd={jsonLd}
       data={data}
       client={client}
@@ -78,3 +78,4 @@ export function ExerciseHtml(props: IProps): JSX.Element {
     </Page>
   );
 }
+

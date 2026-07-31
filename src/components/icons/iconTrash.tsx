@@ -24,3 +24,4 @@ export function IconTrash(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

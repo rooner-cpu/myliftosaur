@@ -1,0 +1,32 @@
+<i> [webpack-dev-server] [HPM] Proxy created: /api  -> https://localhost:7240
+<i> [webpack-dev-server] Project is running at:
+<i> [webpack-dev-server] Loopback: [36mhttp://localhost:8081/[39m
+<i> [webpack-dev-server] On Your Network (IPv4): [36mhttp://192.168.0.195:8081/[39m
+<i> [webpack-dev-server] Content not from webpack is served from '[36mC:\Projects\VMR-Lift\VMR-Lift\dist[39m' directory
+<i> [webpack-dev-middleware] wait until bundle finished: /api/account/me
+<i> [webpack-dev-middleware] wait until bundle finished: /app.css?version=xxxxxxxx
+<i> [webpack-dev-middleware] wait until bundle finished: /images/front-muscles.svg
+<i> [webpack-dev-middleware] wait until bundle finished: /vendors.js?vendor=xxxxxxxx
+<i> [webpack-dev-middleware] wait until bundle finished: /app.js?version=xxxxxxxx
+<i> [webpack-dev-middleware] wait until bundle finished: /manifest.webmanifest
+(node:16636) [DEP_WEBPACK_COMPILATION_ASSETS] DeprecationWarning: Compilation.assets will be frozen in future, all modifications are deprecated.
+BREAKING CHANGE: No more changes should happen to Compilation.assets after sealing the Compilation.
+	Do changes to assets earlier, e. g. in Compilation.hooks.processAssets.
+	Make sure to select an appropriate stage from Compilation.PROCESS_ASSETS_STAGE_*.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:16636) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+<i> [webpack-dev-middleware] wait until bundle finished: /notification.m4r
+<i> [webpack-dev-middleware] wait until bundle finished: /api/geo
+<i> [webpack-dev-middleware] wait until bundle finished: /api/account/me
+<i> [webpack-dev-middleware] wait until bundle finished: /fonts/Poppins-Bold.latin.woff2
+<i> [webpack-dev-middleware] wait until bundle finished: /fonts/Poppins-Regular.latin.woff2
+<i> [webpack-dev-middleware] wait until bundle finished: /fonts/Poppins-SemiBold.latin.woff2
+<i> [webpack-dev-middleware] wait until bundle finished: /images/vmr-lift-logo.webp
+<i> [webpack-dev-middleware] wait until bundle finished: /api/account/me
+<e> [webpack-dev-server] [HPM] ECONNRESET: Error: socket hang up
+<e>     at TLSSocket.socketOnEnd (node:_http_client:617:25)
+<e>     at TLSSocket.emit (node:events:521:24)
+<e>     at endReadableNT (node:internal/streams/readable:1729:12)
+<e>     at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+<e>   code: 'ECONNRESET'
+<e> }

@@ -32,3 +32,4 @@ export function FooterButton(props: IProps): JSX.Element {
     </Pressable>
   );
 }
+

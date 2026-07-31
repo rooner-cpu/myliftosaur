@@ -21,3 +21,4 @@ export function NavModalStatsSettings(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

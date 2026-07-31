@@ -42,3 +42,4 @@ export function IconReddit(props: IProps): JSX.Element {
     </svg>
   );
 }
+

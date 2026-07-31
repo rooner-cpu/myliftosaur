@@ -28,3 +28,4 @@ export function Footer2Wrapper(props: BottomTabBarProps): JSX.Element | null {
   const navCommon = untrack(buildNavCommon(state));
   return <Footer2View dispatch={dispatch} navCommon={navCommon} currentTab={currentTab} />;
 }
+

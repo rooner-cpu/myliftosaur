@@ -67,3 +67,4 @@ export function NavModalPlates(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

@@ -44,6 +44,8 @@ import { TextSize_apply } from "../utils/textSize";
 import { Features_isEnabled } from "../utils/features";
 import { Slider } from "./primitives/slider";
 import { usePerfRenderCount } from "../utils/usePerfRenderCount";
+import { Standalone_localMode } from "../config/standalone";
+import { useVmrDatabaseStatus } from "../utils/vmrDatabaseStatus";
 
 interface IProps {
   dispatch: IDispatch;
@@ -69,6 +71,7 @@ function openExternal(url: string): void {
 
 function ScreenSettingsInner(props: IProps): JSX.Element {
   usePerfRenderCount("ScreenSettings");
+  const vmrDatabase = useVmrDatabaseStatus();
   const [isCopied, setIsCopied] = useState<boolean>(false);
   // This screen reads settings via `untrack`, so it doesn't re-render when `theme` changes.
   // Track the toggle locally so the switch reflects the tap instead of snapping back.
@@ -95,7 +98,9 @@ function ScreenSettingsInner(props: IProps): JSX.Element {
       <MenuItem
         name="Account"
         value={
-          props.user?.email == null ? (
+          Standalone_localMode && vmrDatabase.account ? (
+            StringUtils_truncate(vmrDatabase.account.email, 30)
+          ) : props.user?.email == null ? (
             <Text className="text-text-error">Not signed in</Text>
           ) : props.user?.email === "noemail@example.com" ? (
             "Signed In"
@@ -445,7 +450,7 @@ function ScreenSettingsInner(props: IProps): JSX.Element {
       />
       {Features_isEnabled("affiliates", props.user?.id ?? props.tempUserId) && (
         <>
-          <GroupHeader name="Earn money with Liftosaur" topPadding={true} />
+          <GroupHeader name="Earn money with VMR-Lift" topPadding={true} />
           <MenuItem
             expandName={true}
             name="Affiliate Program"
@@ -497,7 +502,7 @@ function ScreenSettingsInner(props: IProps): JSX.Element {
       <MenuItem name="Changelog" onClick={() => WhatsNew_showWhatsNew(props.dispatch)} />
       <Pressable
         className="py-3 border-b border-border-neutral"
-        onPress={() => openExternal("mailto:info@liftosaur.com")}
+        onPress={() => openExternal("mailto:rooner@gmail.com")}
       >
         <Text className="text-base text-text-primary">Contact Us</Text>
       </Pressable>
@@ -514,37 +519,37 @@ function ScreenSettingsInner(props: IProps): JSX.Element {
       </Pressable>
       <Pressable
         className="py-3 border-b border-border-neutral"
-        onPress={() => openExternal("https://www.liftosaur.com/privacy.html")}
+        onPress={() => openExternal("/privacy.html")}
       >
         <Text className="text-base text-text-primary">Privacy Policy</Text>
       </Pressable>
       <Pressable
         className="py-3 border-b border-border-neutral"
-        onPress={() => openExternal("https://www.liftosaur.com/terms.html")}
+        onPress={() => openExternal("/terms.html")}
       >
         <Text className="text-base text-text-primary">Terms & Conditions</Text>
       </Pressable>
       <Pressable
         className="py-3 border-b border-border-neutral"
-        onPress={() => openExternal("https://www.liftosaur.com/licenses.html")}
+        onPress={() => openExternal("/licenses.html")}
       >
         <Text className="text-base text-text-primary">Licenses</Text>
       </Pressable>
       <Pressable
         className="py-3 border-b border-border-neutral"
-        onPress={() => openExternal("https://www.liftosaur.com/doc")}
+        onPress={() => openExternal("/doc")}
       >
         <Text className="text-base text-text-primary">Documentation</Text>
       </Pressable>
       <Pressable
         className="py-3 border-b border-border-neutral"
-        onPress={() => openExternal("https://github.com/astashov/liftosaur")}
+        onPress={() => openExternal("https://github.com/rooner-cpu/myliftosaur")}
       >
         <Text className="text-base text-text-primary">Source Code on Github</Text>
       </Pressable>
       <Pressable
         className="py-3 border-b border-border-neutral"
-        onPress={() => openExternal("https://github.com/astashov/liftosaur/discussions")}
+        onPress={() => openExternal("https://github.com/rooner-cpu/myliftosaur/issues")}
       >
         <Text className="text-base text-text-primary">📍 Roadmap</Text>
       </Pressable>
@@ -553,3 +558,5 @@ function ScreenSettingsInner(props: IProps): JSX.Element {
 }
 
 export const ScreenSettings = memo(ScreenSettingsInner);
+
+

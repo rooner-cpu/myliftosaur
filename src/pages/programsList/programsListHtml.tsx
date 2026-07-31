@@ -13,8 +13,8 @@ interface IProps {
 
 export function ProgramsListHtml(props: IProps): JSX.Element {
   const { client, ...data } = props;
-  const title = "Your Programs List | Liftosaur";
-  const url = "https://www.liftosaur.com/user/programs";
+  const title = "Your Programs List | VMR-Lift";
+  const url = "http://myliftosaur.local:8081/user/programs";
 
   return (
     <Page
@@ -34,3 +34,4 @@ export function ProgramsListHtml(props: IProps): JSX.Element {
     </Page>
   );
 }
+

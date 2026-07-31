@@ -55,3 +55,4 @@ export function WorkoutExercisePager(props: IWorkoutExercisePagerProps): JSX.Ele
     </div>
   );
 }
+

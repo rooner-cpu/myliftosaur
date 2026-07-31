@@ -16,7 +16,7 @@ export function HelpEditProgramV2(): JSX.Element {
     <View>
       <Text className="pb-2 text-xl font-semibold">Edit Program</Text>
       <Text className="mb-2 text-sm">
-        In Liftosaur, you need to build a weightlifting program in order to do workouts. This is the screen where you
+        In VMR-Lift, you need to build a weightlifting program in order to do workouts. This is the screen where you
         can do it. You can build your weightlifting program and ensure you have proper{" "}
         <Text className="text-sm font-bold">weekly volume per muscle group</Text>, and balance it with the{" "}
         <Text className="text-sm font-bold">time you spend in a gym</Text>. You can build multi-week programs, plan your
@@ -84,7 +84,7 @@ export function HelpEditProgramV2(): JSX.Element {
       <Text className="mb-2 text-sm">
         The exercise syntax supports RPEs (Rate of Perceived Exertion - a subjective measure of how hard the set was),
         rest timers, various progressive overload types, etc. It's very powerful, read more about all the features{" "}
-        <Link className="text-sm" href="https://www.liftosaur.com/doc">
+        <Link className="text-sm" href="/doc">
           in the docs
         </Link>
         !
@@ -92,3 +92,5 @@ export function HelpEditProgramV2(): JSX.Element {
     </View>
   );
 }
+
+

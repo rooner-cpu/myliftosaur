@@ -73,3 +73,4 @@ export const HistoryEntryView = memo((props: IHistoryEntryProps): JSX.Element =>
     </View>
   );
 });
+

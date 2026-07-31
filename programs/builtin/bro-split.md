@@ -223,3 +223,4 @@ Triceps Pushdown / 3x10 / 40lb / 60s / progress: dp(5lb, 10, 12)
 Preacher Curl / 3x12 / 20lb / 60s / progress: dp(5lb, 12, 15)
 Triceps Extension / 3x12 / 20lb / 60s / progress: dp(5lb, 12, 15)
 ```
+

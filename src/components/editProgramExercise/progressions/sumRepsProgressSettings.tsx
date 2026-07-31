@@ -91,3 +91,4 @@ export function SumRepsProgressSettings(props: ISumRepsProgressSettingsProps): J
     </View>
   );
 }
+

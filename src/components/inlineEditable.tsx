@@ -107,3 +107,4 @@ export function InlineEditable({ value, onChange, onInput, className = "" }: IIn
     </div>
   );
 }
+

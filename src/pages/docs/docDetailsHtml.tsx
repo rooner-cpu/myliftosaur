@@ -13,9 +13,9 @@ interface IProps {
 export function DocDetailsHtml(props: IProps): JSX.Element {
   const { client, isLoggedIn, ...data } = props;
   const { doc } = props;
-  const title = `${doc.title} - Liftosaur Documentation`;
-  const url = `https://www.liftosaur.com/doc/${doc.id}`;
-  const description = doc.shortDescription || `${doc.title} - Liftosaur documentation.`;
+  const title = `${doc.title} - VMR-Lift Documentation`;
+  const url = `http://myliftosaur.local:8081/doc/${doc.id}`;
+  const description = doc.shortDescription || `${doc.title} - VMR-Lift documentation.`;
 
   const jsonLd: IJsonLd[] = [
     {
@@ -29,8 +29,8 @@ export function DocDetailsHtml(props: IProps): JSX.Element {
     {
       type: "BreadcrumbList",
       items: [
-        { name: "Home", url: "https://www.liftosaur.com" },
-        { name: "Documentation", url: "https://www.liftosaur.com/doc" },
+        { name: "Home", url: "http://myliftosaur.local:8081" },
+        { name: "Documentation", url: "http://myliftosaur.local:8081/doc" },
         { name: doc.title },
       ],
     },
@@ -57,3 +57,4 @@ export function DocDetailsHtml(props: IProps): JSX.Element {
     </Page>
   );
 }
+

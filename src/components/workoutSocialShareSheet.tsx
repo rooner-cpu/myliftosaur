@@ -251,3 +251,4 @@ function WorkoutShareImage(props: IWorkoutShareImageProps): JSX.Element {
     </View>
   );
 }
+

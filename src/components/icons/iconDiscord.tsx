@@ -21,3 +21,4 @@ export function IconDiscord(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

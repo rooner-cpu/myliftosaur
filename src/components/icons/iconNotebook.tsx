@@ -35,3 +35,4 @@ export function IconNotebook(props: IProps): JSX.Element {
     </svg>
   );
 }
+

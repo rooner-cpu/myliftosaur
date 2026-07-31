@@ -28,3 +28,4 @@ export function IconHamburger(props: IProps): JSX.Element {
     </svg>
   );
 }
+

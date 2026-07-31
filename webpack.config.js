@@ -35,8 +35,35 @@ const bundleVersionWatchAndroid = 1;
 
 const localapi = `https://${localapidomain}.liftosaur.com:${localapiport}/`;
 const local = `https://${localdomain}.liftosaur.com:${localport}/`;
+const vmrDevelopmentApi = process.env.VMR_API_URL || "https://localhost:7240";
 
 const isDev = process.env.NODE_ENV !== "production";
+const isVmrStandalone = process.env.VMR_STANDALONE === "1";
+const assetVersion =
+  process.env.VMR_ASSET_VERSION ||
+  (isVmrStandalone ? `${commitHash}-${new Date().toISOString().replace(/[-:.TZ]/g, "")}` : commitHash);
+const exerciseImageHost =
+  process.env.VMR_EXERCISE_IMAGE_HOST || (isVmrStandalone ? "https://www.liftosaur.com" : "");
+const developmentHost = isVmrStandalone ? `http://${localdomain}:${localport}` : local;
+const developmentApiHost = isVmrStandalone ? "" : `https://${localapidomain}.liftosaur.com:${localapiport}`;
+const developmentStreamingApiHost = isVmrStandalone
+  ? ""
+  : `https://${localstreamingapidomain}.liftosaur.com:${localstreamingapiport}`;
+const productionHost = isVmrStandalone
+  ? ""
+  : process.env.STAGE
+    ? "https://stage.liftosaur.com"
+    : "https://www.liftosaur.com";
+const productionApiHost = isVmrStandalone
+  ? ""
+  : process.env.STAGE
+    ? "https://api3-dev.liftosaur.com"
+    : "https://api3.liftosaur.com";
+const productionStreamingApiHost = isVmrStandalone
+  ? ""
+  : process.env.STAGE
+    ? "https://streaming-api-dev.liftosaur.com"
+    : "https://streaming-api.liftosaur.com";
 
 const uniwindRnRewrite = new NormalModuleReplacementPlugin(/^react-native$/, (resource) => {
   const issuer = (resource.contextInfo && resource.contextInfo.issuer) || resource.context || "";
@@ -131,12 +158,9 @@ const watchConfig = {
       __COMMIT_HASH__: JSON.stringify(commitHash),
       __FULL_COMMIT_HASH__: JSON.stringify(fullCommitHash),
       __HOST__: JSON.stringify(
-        process.env.NODE_ENV === "production"
-          ? process.env.STAGE
-            ? "https://stage.liftosaur.com"
-            : "https://www.liftosaur.com"
-          : local
+        process.env.NODE_ENV === "production" ? productionHost : developmentHost
       ),
+      __EXERCISE_IMAGE_HOST__: JSON.stringify(exerciseImageHost),
       __ENV__: JSON.stringify(process.env.NODE_ENV === "production" ? "production" : "development"),
     }),
   ],
@@ -241,7 +265,7 @@ const mainConfig = {
     uniwindStyleSheetRewrite,
     lftMarkerPlugin,
     new SourceMapDevToolPlugin({
-      append: `\n//# sourceMappingURL=[url]?version=${commitHash}`,
+      append: `\n//# sourceMappingURL=[url]?version=${assetVersion}`,
       filename: "[file].map",
     }),
     new MiniCssExtractPlugin({ filename: "[name].css" }),
@@ -254,26 +278,21 @@ const mainConfig = {
       __FULL_COMMIT_HASH__: JSON.stringify(fullCommitHash),
       __API_HOST__: JSON.stringify(
         process.env.NODE_ENV === "production"
-          ? process.env.STAGE
-            ? "https://api3-dev.liftosaur.com"
-            : "https://api3.liftosaur.com"
-          : `https://${localapidomain}.liftosaur.com:${localapiport}`
+          ? productionApiHost
+          : developmentApiHost
       ),
       __STREAMING_API_HOST__: JSON.stringify(
         process.env.NODE_ENV === "production"
-          ? process.env.STAGE
-            ? "https://streaming-api-dev.liftosaur.com"
-            : "https://streaming-api.liftosaur.com"
-          : `https://${localstreamingapidomain}.liftosaur.com:${localstreamingapiport}`
+          ? productionStreamingApiHost
+          : developmentStreamingApiHost
       ),
       __ENV__: JSON.stringify(process.env.NODE_ENV === "production" ? "production" : "development"),
       __HOST__: JSON.stringify(
         process.env.NODE_ENV === "production"
-          ? process.env.STAGE
-            ? "https://stage.liftosaur.com"
-            : "https://www.liftosaur.com"
-          : `https://${localdomain}.liftosaur.com:${localport}`
+          ? productionHost
+          : developmentHost
       ),
+      __EXERCISE_IMAGE_HOST__: JSON.stringify(exerciseImageHost),
     }),
     new CopyPlugin([
       {
@@ -282,8 +301,8 @@ const mainConfig = {
         transform: (content) => {
           return content
             .toString()
-            .replace(/\?version=xxxxxxxx/g, `?version=${commitHash}`)
-            .replace(/\?vendor=xxxxxxxx/g, `?vendor=${commitHash}`);
+            .replace(/\?version=xxxxxxxx/g, `?version=${assetVersion}`)
+            .replace(/\?vendor=xxxxxxxx/g, `?vendor=${assetVersion}`);
         },
       },
       {
@@ -381,6 +400,24 @@ const mainConfig = {
     },
     setupMiddlewares: (middlewares, devServer) => {
       middlewares.unshift({
+        name: "app-html",
+        middleware: (req, res, next) => {
+          const cleanUrl = req.url.split("?")[0];
+
+          if (cleanUrl === "/app" || cleanUrl.startsWith("/app/")) {
+            const html = fs
+              .readFileSync(path.join(__dirname, "src", "index.html"), "utf8")
+              .replace(/\?version=xxxxxxxx/g, `?version=${assetVersion}`)
+              .replace(/\?vendor=xxxxxxxx/g, `?vendor=${assetVersion}`);
+            res.type("html").send(html);
+            return;
+          }
+
+          next();
+        },
+      });
+
+      middlewares.unshift({
         name: "static-rewrite",
         middleware: (req, res, next) => {
           if (req.url.startsWith("/static/")) {
@@ -411,212 +448,14 @@ const mainConfig = {
     liveReload: false,
     host: "0.0.0.0",
     port: localport,
-    proxy: {
-      "/.well-known/oauth-*": {
-        target: localapi,
+    proxy: [
+      {
+        context: ["/api"],
+        target: vmrDevelopmentApi,
         secure: false,
-      },
-      "/oauth/*": {
-        target: localapi,
-        secure: false,
-      },
-      "/mcp": {
-        target: localapi,
-        secure: false,
-      },
-      "/p/*": {
-        target: localapi,
-        secure: false,
-      },
-      "/doc": {
-        target: localapi,
-        secure: false,
-      },
-      "/doc/*": {
-        target: localapi,
-        secure: false,
-      },
-      "/docs": {
-        target: localapi,
-        secure: false,
-        pathRewrite: { "^/docs": "/doc" },
-      },
-      "/docs/*": {
-        target: localapi,
-        secure: false,
-        pathRewrite: { "^/docs": "/doc" },
-      },
-      "/blog/docs": {
-        target: localapi,
-        secure: false,
-        bypass: (req, res) => {
-          if (req.path === "/blog/docs" || req.path.startsWith("/blog/docs/")) {
-            const docPath = req.url.replace(/^\/blog\/docs/, "/doc").replace(/^\/doc\/$/, "/doc");
-            res.redirect(302, docPath);
-            return false;
-          }
-        },
-      },
-      "/about": {
-        target: localapi,
-        pathRewrite: (p, req) => {
-          return "/main";
-        },
-        secure: false,
-      },
-      "/n/*": {
-        target: localapi,
-        secure: false,
-      },
-      "/record": {
-        target: localapi + "/api",
-        secure: false,
-      },
-      "/admin": {
-        target: localapi,
-        secure: false,
-      },
-      "/profileimage/*": {
-        target: localapi,
-        secure: false,
-        pathRewrite: (p, req) => {
-          const user = p.replace(/^\//, "").replace(/\/$/, "").split("/")[1];
-          return `/profileimage?user=${user}`;
-        },
-      },
-      "/profile/*": {
-        target: localapi,
-        secure: false,
-        pathRewrite: (p, req) => {
-          const user = p.replace(/^\//, "").replace(/\/$/, "").split("/")[1];
-          return `/profile?user=${user}`;
-        },
-      },
-      "/program-preview": {
-        target: localapi,
-        secure: false,
-      },
-      "/programs/*": {
-        target: localapi,
-        secure: false,
-      },
-      "/planner": {
-        target: localapi,
-        secure: false,
-      },
-      "/dashboards/affiliates/*": {
-        target: localapi,
-        secure: false,
-      },
-      "/externalimages/*": {
-        target: "https://www.liftosaur.com/",
-        secure: true,
         changeOrigin: true,
       },
-      "/dashboards/users": {
-        target: localapi,
-        secure: false,
-      },
-      "/dashboards/user/*": {
-        target: localapi,
-        secure: false,
-      },
-      "/dashboards/payments": {
-        target: localapi,
-        secure: false,
-      },
-      "/login": {
-        target: localapi,
-        secure: false,
-      },
-      "/exercises": {
-        target: localapi,
-        secure: false,
-      },
-      "/rep-max-calculator": { target: localapi, secure: false },
-      "/one-rep-max-calculator": { target: localapi, secure: false },
-      "/two-rep-max-calculator": { target: localapi, secure: false },
-      "/three-rep-max-calculator": { target: localapi, secure: false },
-      "/four-rep-max-calculator": { target: localapi, secure: false },
-      "/five-rep-max-calculator": { target: localapi, secure: false },
-      "/six-rep-max-calculator": { target: localapi, secure: false },
-      "/seven-rep-max-calculator": { target: localapi, secure: false },
-      "/eight-rep-max-calculator": { target: localapi, secure: false },
-      "/nine-rep-max-calculator": { target: localapi, secure: false },
-      "/ten-rep-max-calculator": { target: localapi, secure: false },
-      "/evelen-rep-max-calculator": { target: localapi, secure: false },
-      "/twelve-rep-max-calculator": { target: localapi, secure: false },
-      "/rm": { target: localapi, secure: false },
-      "/1rm": { target: localapi, secure: false },
-      "/2rm": { target: localapi, secure: false },
-      "/3rm": { target: localapi, secure: false },
-      "/4rm": { target: localapi, secure: false },
-      "/5rm": { target: localapi, secure: false },
-      "/6rm": { target: localapi, secure: false },
-      "/7rm": { target: localapi, secure: false },
-      "/8rm": { target: localapi, secure: false },
-      "/9rm": { target: localapi, secure: false },
-      "/10rm": { target: localapi, secure: false },
-      "/11rm": { target: localapi, secure: false },
-      "/12rm": { target: localapi, secure: false },
-      "/exercises/*": {
-        target: localapi,
-        secure: false,
-      },
-      "/.well-known/skadnetwork/report-attribution": {
-        pathRewrite: { "^/.well-known/skadnetwork/report-attribution": "/api/adattr" },
-        target: localapi,
-        secure: false,
-      },
-      "/program": {
-        target: localapi,
-        secure: false,
-        bypass: function (req) {
-          if (req.path.startsWith("/programdata")) {
-            return req.path;
-          }
-        },
-      },
-      "/user/*": {
-        target: localapi,
-        secure: false,
-      },
-      "/affiliates": {
-        target: localapi,
-        secure: false,
-      },
-      "/ai": {
-        target: localapi,
-        secure: false,
-      },
-      "/programimage/*": {
-        target: localapi + "/api",
-        secure: false,
-      },
-      "/user/programs": {
-        target: localapi,
-        secure: false,
-      },
-      "/": {
-        target: localapi,
-        bypass: function (req, res, proxyOptions) {
-          // If the request is not for the root path, bypass the proxy
-          if (req.path !== "/") {
-            return req.path;
-          }
-        },
-        pathRewrite: (p, req) => {
-          console.log(p);
-          const url = new URL(p, "https://www.example.com");
-          if (url.pathname === "/") {
-            return "/main";
-          } else {
-            return p;
-          }
-        },
-        secure: false,
-      },
-    },
+    ],
   },
 };
 
@@ -707,25 +546,18 @@ const editorWebviewConfig = {
       __FULL_COMMIT_HASH__: JSON.stringify(fullCommitHash),
       __ENV__: JSON.stringify(process.env.NODE_ENV === "production" ? "production" : "development"),
       __HOST__: JSON.stringify(
-        process.env.NODE_ENV === "production"
-          ? process.env.STAGE
-            ? "https://stage.liftosaur.com"
-            : "https://www.liftosaur.com"
-          : local
+        process.env.NODE_ENV === "production" ? productionHost : developmentHost
       ),
+      __EXERCISE_IMAGE_HOST__: JSON.stringify(exerciseImageHost),
       __API_HOST__: JSON.stringify(
         process.env.NODE_ENV === "production"
-          ? process.env.STAGE
-            ? "https://api3-dev.liftosaur.com"
-            : "https://api3.liftosaur.com"
-          : `https://${localapidomain}.liftosaur.com:${localapiport}`
+          ? productionApiHost
+          : developmentApiHost
       ),
       __STREAMING_API_HOST__: JSON.stringify(
         process.env.NODE_ENV === "production"
-          ? process.env.STAGE
-            ? "https://streaming-api-dev.liftosaur.com"
-            : "https://streaming-api.liftosaur.com"
-          : `https://${localstreamingapidomain}.liftosaur.com:${localstreamingapiport}`
+          ? productionStreamingApiHost
+          : developmentStreamingApiHost
       ),
       __BUNDLE_VERSION_IOS__: bundleVersionIos,
       __BUNDLE_VERSION_ANDROID__: bundleVersionAndroid,
@@ -765,3 +597,4 @@ const editorWebviewConfig = {
 };
 
 module.exports = [mainConfig, watchConfig, editorWebviewConfig];
+

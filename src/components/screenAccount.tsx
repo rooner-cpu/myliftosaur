@@ -1,4 +1,5 @@
-import { JSX, useEffect, useState } from "react";
+import { JSX, useEffect, useState } from "react";
+import { Standalone_localMode } from "../config/standalone";
 import { View, Pressable, Platform, AppState } from "react-native";
 import { Text } from "./primitives/text";
 import { IDispatch } from "../ducks/types";
@@ -9,7 +10,6 @@ import {
   Thunk_switchAccount,
   Thunk_deleteAccount,
   Thunk_createAccount,
-  Thunk_deleteAccountRemote,
   Thunk_pushScreen,
   Thunk_openManageSubscriptions,
   Thunk_iapRefreshActiveSubscriptions,
@@ -29,11 +29,13 @@ import { LinkButton } from "./linkButton";
 import { IconTrash } from "./icons/iconTrash";
 import { IconApple } from "./icons/iconApple";
 import { IconSpinner } from "./icons/iconSpinner";
-import { Dialog_confirm, Dialog_prompt, Dialog_alert } from "../utils/dialog";
+import { Dialog_confirm, Dialog_prompt } from "../utils/dialog";
 import { Tailwind_colors, Tailwind_semantic } from "../utils/tailwindConfig";
 import { IIapActiveSubscription } from "../utils/iapAdapter";
 import { SubscriptionPlan_derive, ISubscriptionPlanKind, IDerivedSubscriptionPlan } from "../utils/subscriptionPlan";
 import { DateUtils_format } from "../utils/date";
+import { VmrAccountPanel } from "./vmrAccountPanel";
+import { useVmrDatabaseStatus } from "../utils/vmrDatabaseStatus";
 
 declare let __HOST__: string;
 
@@ -49,6 +51,7 @@ interface IProps {
 }
 
 export function ScreenAccount(props: IProps): JSX.Element {
+  const vmrDatabase = useVmrDatabaseStatus();
   const [otherAccounts, setOtherAccounts] = useState<IAccount[]>([]);
   const [isOtherAccountsEditMode, setIsOtherAccountsEditMode] = useState<boolean>(false);
 
@@ -74,6 +77,9 @@ export function ScreenAccount(props: IProps): JSX.Element {
   }, [currentAccountId]);
 
   useEffect(() => {
+    if (Standalone_localMode) {
+      return;
+    }
     props.dispatch(Thunk_iapRefreshActiveSubscriptions());
     // Re-check on foreground so a cancel/change made in the system subscription manager (App Store /
     // Google Play) — e.g. after tapping "Cancel subscription" here — is reflected when the user returns.
@@ -96,7 +102,7 @@ export function ScreenAccount(props: IProps): JSX.Element {
   // "loading" = native subscriber whose store status hasn't arrived yet (status undefined). Spinning here
   // (rather than flashing "Free plan") covers the first render and a failed getActiveSubscriptions(); once a
   // known status arrives a re-check keeps showing it instead of flipping back to a spinner.
-  const isLoadingSubscription = plan.state === "loading";
+  const isLoadingSubscription = !Standalone_localMode && plan.state === "loading";
 
   useEffect(() => {
     if (Platform.OS === "web" && typeof window !== "undefined" && window.AppleID?.auth) {
@@ -150,19 +156,32 @@ export function ScreenAccount(props: IProps): JSX.Element {
             {currentAccount.name ? (
               <Text className="-mt-1 text-xs text-text-secondary">{`id: ${currentAccount.id}`}</Text>
             ) : null}
-            {props.email ? (
+            {Standalone_localMode ? (
+              vmrDatabase.account ? (
+                <Text className="text-xs text-text-secondary">
+                  Signed in as{" "}
+                  <Text className="text-xs font-bold text-text-secondary">{vmrDatabase.account.email}</Text>
+                </Text>
+              ) : vmrDatabase.status === "offline" ? (
+                <Text className="text-xs text-text-error">Database unavailable</Text>
+              ) : (
+                <Text className="text-xs text-text-secondary">Account required</Text>
+              )
+            ) : props.email ? (
               props.email === "noemail@example.com" ? null : (
                 <Text className="text-xs text-text-secondary">
                   Signed in as <Text className="text-sm font-bold text-text-secondary">{props.email}</Text>
                 </Text>
               )
             ) : (
-              <Text className="text-xs text-text-error">Not signed in to cloud</Text>
+              <Text className="text-xs text-text-error">Not signed in</Text>
             )}
           </View>
         }
       />
-      {props.email ? (
+      {Standalone_localMode ? (
+        <VmrAccountPanel />
+      ) : props.email ? (
         <View className="items-center">
           <Button
             name="account-sign-out"
@@ -199,7 +218,7 @@ export function ScreenAccount(props: IProps): JSX.Element {
           </Pressable>
         </View>
       )}
-      <GroupHeader name="🌟 Liftosaur Premium" topPadding={true} />
+      <GroupHeader name={Standalone_localMode ? "Account Access" : "VMR-Lift Access"} topPadding={true} />
       {isLoadingSubscription ? (
         <MenuItem name="Checking your subscription…" expandName={true} value={<IconSpinner width={18} height={18} />} />
       ) : (
@@ -229,147 +248,92 @@ export function ScreenAccount(props: IProps): JSX.Element {
           )}
         </>
       )}
-      <GroupHeader
-        name="Other local accounts"
-        topPadding={true}
-        rightAddOn={
-          otherAccounts.length > 0 ? (
-            <LinkButton
-              name="account-edit"
-              onClick={() => {
-                setIsOtherAccountsEditMode(!isOtherAccountsEditMode);
+      {!Standalone_localMode ? (
+        <>
+          <GroupHeader
+            name="Other local accounts"
+            topPadding={true}
+            rightAddOn={
+              otherAccounts.length > 0 ? (
+                <LinkButton
+                  name="account-edit"
+                  onClick={() => {
+                    setIsOtherAccountsEditMode(!isOtherAccountsEditMode);
+                  }}
+                >
+                  {isOtherAccountsEditMode ? "Finish Editing" : "Edit"}
+                </LinkButton>
+              ) : undefined
+            }
+          />
+          {otherAccounts.map((account) => (
+            <MenuItem
+              key={account.id}
+              shouldShowRightArrow={!isOtherAccountsEditMode}
+              name={account.name ? account.name : `id: ${account.id}`}
+              onClick={async () => {
+                if (
+                  !isOtherAccountsEditMode &&
+                  (await Dialog_confirm(
+                    "Want to switch to this account? You WILL NOT lose your current account, you'll be able to switch back to it later."
+                  ))
+                ) {
+                  props.dispatch(Thunk_switchAccount(account.id));
+                }
               }}
-            >
-              {isOtherAccountsEditMode ? "Finish Editing" : "Edit"}
-            </LinkButton>
-          ) : undefined
-        }
-      />
-      {otherAccounts.map((account) => (
-        <MenuItem
-          key={account.id}
-          shouldShowRightArrow={!isOtherAccountsEditMode}
-          name={account.name ? account.name : `id: ${account.id}`}
-          onClick={async () => {
-            if (
-              !isOtherAccountsEditMode &&
-              (await Dialog_confirm(
-                "Want to switch to this account? You WILL NOT lose your current account, you'll be able to switch back to it later."
-              ))
-            ) {
-              props.dispatch(Thunk_switchAccount(account.id));
-            }
-          }}
-          value={
-            isOtherAccountsEditMode ? (
-              <Pressable
-                className="p-2 nm-account-delete-account"
-                onPress={async () => {
-                  const answer = await Dialog_prompt(
-                    "Are you sure? All the local data for this account will be lost, and you won't be able to restore it unless you have a cloud account. Type 'delete' to confirm."
-                  );
-                  if (answer?.toLocaleLowerCase() === "delete") {
-                    props.dispatch(Thunk_deleteAccount(account.id, () => refetchAccounts()));
-                  }
-                }}
-              >
-                <IconTrash />
-              </Pressable>
-            ) : (
-              <View className="flex-row items-center">
-                <Text className="pr-2 text-text-primary">{account.numberOfPrograms}</Text>
-                <View className="pr-4">
-                  <IconDoc width={12} height={16} />
-                </View>
-                <Text className="pr-2 text-text-primary">{account.numberOfWorkouts}</Text>
-                <View>
-                  <IconDumbbell width={28} height={19} />
-                </View>
-              </View>
-            )
-          }
-          expandName={true}
-          addons={
-            <View>
-              {AdminDebug_isDebugAccountId(account.id) ? (
-                <Text className="-mt-1 text-xs font-bold text-text-error">DEBUG · sync off</Text>
-              ) : null}
-              {account.name ? <Text className="-mt-1 text-xs text-text-secondary">{`id: ${account.id}`}</Text> : null}
-              {account.email && account.email !== "noemail@example.com" && (
-                <Text className="text-xs text-text-secondary">
-                  Was logged in as <Text className="text-sm font-bold text-text-secondary">{account.email}</Text>
-                </Text>
-              )}
-            </View>
-          }
-        />
-      ))}
-      <LinkButton
-        name="local-account-create"
-        onClick={async () => {
-          if (
-            await Dialog_confirm(
-              "Want to create a new local account? You WILL NOT lose your current account, you'll be able to switch back to it later."
-            )
-          ) {
-            props.dispatch(Thunk_createAccount());
-          }
-        }}
-      >
-        Create New Local Account
-      </LinkButton>
-      <GroupHeader name="Delete current account" topPadding={true} />
-      <View>
-        <Button
-          name="account-delete"
-          kind="red"
-          className="mt-4 ls-delete-account"
-          onClick={async () => {
-            const answer = await Dialog_prompt(
-              "Are you sure? All the local data for this account will be lost, and you won't be able to restore it unless you have a cloud account. Type 'delete' to confirm."
-            );
-            if (answer?.toLocaleLowerCase() === "delete") {
-              props.dispatch(
-                Thunk_logOut(() => {
-                  props.dispatch(Thunk_deleteAccount(currentAccount.id));
-                  props.dispatch(Thunk_createAccount());
-                })
-              );
-            }
-          }}
-        >
-          Delete Current Local Account
-        </Button>
-      </View>
-      {props.email && (
-        <View>
-          <Button
-            name="account-delete-remote"
-            kind="red"
-            className="mt-4 ls-delete-account-remote"
-            onClick={async () => {
-              const answer = await Dialog_prompt(
-                "Are you sure? All the data for this account will be deleted from the cloud, and you won't be able to restore it unless you resignup and sync your data again. Type 'delete' to confirm."
-              );
-              if (answer?.toLocaleLowerCase() === "delete") {
-                props.dispatch(
-                  Thunk_deleteAccountRemote((result) => {
-                    if (result) {
-                      Dialog_alert("Account deleted from cloud.");
-                    } else {
-                      Dialog_alert(
-                        "Couldn't delete the account from the cloud - error happened. Please send an email to info@liftosaur.com to delete it."
+              value={
+                isOtherAccountsEditMode ? (
+                  <Pressable
+                    className="p-2 nm-account-delete-account"
+                    onPress={async () => {
+                      const answer = await Dialog_prompt(
+                        "Are you sure? All the local data for this account will be lost. Type 'delete' to confirm."
                       );
-                    }
-                  })
-                );
+                      if (answer?.toLocaleLowerCase() === "delete") {
+                        props.dispatch(Thunk_deleteAccount(account.id, () => refetchAccounts()));
+                      }
+                    }}
+                  >
+                    <IconTrash />
+                  </Pressable>
+                ) : (
+                  <View className="flex-row items-center">
+                    <Text className="pr-2 text-text-primary">{account.numberOfPrograms}</Text>
+                    <View className="pr-4">
+                      <IconDoc width={12} height={16} />
+                    </View>
+                    <Text className="pr-2 text-text-primary">{account.numberOfWorkouts}</Text>
+                    <View>
+                      <IconDumbbell width={28} height={19} />
+                    </View>
+                  </View>
+                )
+              }
+              expandName={true}
+              addons={
+                <View>
+                  {AdminDebug_isDebugAccountId(account.id) ? (
+                    <Text className="-mt-1 text-xs font-bold text-text-error">DEBUG · sync off</Text>
+                  ) : null}
+                  {account.name ? (
+                    <Text className="-mt-1 text-xs text-text-secondary">{`id: ${account.id}`}</Text>
+                  ) : null}
+                </View>
+              }
+            />
+          ))}
+          <LinkButton
+            name="local-account-create"
+            onClick={async () => {
+              if (await Dialog_confirm("Create a new local account?")) {
+                props.dispatch(Thunk_createAccount());
               }
             }}
           >
-            Delete Current Cloud Account
-          </Button>
-        </View>
-      )}
+            Create New Local Account
+          </LinkButton>
+        </>
+      ) : null}
     </View>
   );
 }
@@ -430,3 +394,7 @@ function buildPremiumCard(plan: IDerivedSubscriptionPlan): IPremiumCard {
       return { title: "Free plan", actionLabel: "Get Premium", showCancel: false };
   }
 }
+
+
+
+

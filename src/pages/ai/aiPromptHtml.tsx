@@ -18,10 +18,10 @@ export function AiPromptHtml(props: IAiPromptHtmlProps): JSX.Element {
       js={["aiPrompt"]}
       maxWidth={1200}
       isLoggedIn={!!props.account}
-      title="Liftoscript Prompt Generator | Liftosaur"
+      title="Liftoscript Prompt Generator | VMR-Lift"
       description="Generate prompts to convert workout programs to Liftoscript format using any LLM like ChatGPT, Claude, or Gemini."
-      canonical="https://www.liftosaur.com/ai/prompt"
-      ogUrl="https://www.liftosaur.com/ai/prompt"
+      canonical="http://myliftosaur.local:8081/ai/prompt"
+      ogUrl="http://myliftosaur.local:8081/ai/prompt"
       data={props}
       url="/ai/prompt"
     >
@@ -29,3 +29,4 @@ export function AiPromptHtml(props: IAiPromptHtmlProps): JSX.Element {
     </Page>
   );
 }
+

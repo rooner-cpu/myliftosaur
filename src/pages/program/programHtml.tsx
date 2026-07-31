@@ -24,9 +24,9 @@ export function ProgramHtml(props: IProps): JSX.Element {
   const programName = data.exportedProgram?.program?.name;
   const title =
     programName != null
-      ? `${HtmlUtils_escapeHtml(programName)} | Workout Editor | Liftosaur`
-      : "Weightlifting Workout Planner | Liftosaur";
-  const url = "https://www.liftosaur.com" + (data.exportedProgram?.program?.planner ? "/planner" : "/program");
+      ? `${HtmlUtils_escapeHtml(programName)} | Workout Editor | VMR-Lift`
+      : "Weightlifting Workout Planner | VMR-Lift";
+  const url = "http://myliftosaur.local:8081" + (data.exportedProgram?.program?.planner ? "/planner" : "/program");
 
   return (
     <Page
@@ -47,3 +47,4 @@ export function ProgramHtml(props: IProps): JSX.Element {
     </Page>
   );
 }
+

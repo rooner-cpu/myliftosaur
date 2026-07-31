@@ -22,3 +22,4 @@ export function IconCloseCircleOutline(props: IProps = {}): JSX.Element {
     </Svg>
   );
 }
+

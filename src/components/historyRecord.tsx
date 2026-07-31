@@ -218,3 +218,4 @@ function editHistoryRecord(historyRecord: IHistoryRecord, dispatch: IDispatch, i
     dispatch(Thunk_editHistoryRecord(historyRecord));
   }
 }
+

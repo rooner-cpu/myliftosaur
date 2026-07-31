@@ -13,3 +13,4 @@ export function NavScreenGraphs(): JSX.Element {
     </NavScreenContent>
   );
 }
+

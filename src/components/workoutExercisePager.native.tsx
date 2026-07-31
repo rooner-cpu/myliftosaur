@@ -49,3 +49,4 @@ export function WorkoutExercisePager(props: IWorkoutExercisePagerProps): JSX.Ele
     </ScrollView>
   );
 }
+

@@ -29,3 +29,4 @@ export function FallbackScreen<T extends Record<string, unknown>>(props: IProps<
 
   return props.children(props.state as INonNullableValues<T>);
 }
+

@@ -257,3 +257,4 @@ export function MuscleGroupsView(props: {
     </View>
   );
 }
+

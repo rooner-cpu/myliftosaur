@@ -171,3 +171,4 @@ export function EditProgramExerciseNavbar(props: IEditProgramExerciseNavbarProps
     </View>
   );
 }
+

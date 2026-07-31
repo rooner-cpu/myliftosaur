@@ -171,3 +171,4 @@ export function NavbarCenterView(props: INavbarCenterProps): JSX.Element {
     );
   }
 }
+

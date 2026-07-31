@@ -123,3 +123,4 @@ export function DoubleProgressSettings(props: IDoubleProgressSettingsProps): JSX
     </View>
   );
 }
+

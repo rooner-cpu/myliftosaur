@@ -76,3 +76,4 @@ export function BackMusclesSvg(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

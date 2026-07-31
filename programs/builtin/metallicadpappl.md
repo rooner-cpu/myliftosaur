@@ -223,3 +223,4 @@ Leg Press / 3x8 / 135lb
 Seated Leg Curl / 3x8 / 50lb
 Standing Calf Raise / 5x8 / 90lb
 ```
+

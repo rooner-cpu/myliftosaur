@@ -1354,3 +1354,4 @@ function BottomButton(props: IBottomButtonProps): JSX.Element {
     </View>
   );
 }
+

@@ -239,3 +239,4 @@ Deadlift / 3x4 80%, 1x4+ 80%
 Overhead Press / 3x4 80%, 1x4+ 80%
 Bent Over Row / 4x8 72%
 ```
+

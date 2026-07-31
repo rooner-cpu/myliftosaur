@@ -30,3 +30,4 @@ export function HelpMusclesDay(): JSX.Element {
     </View>
   );
 }
+

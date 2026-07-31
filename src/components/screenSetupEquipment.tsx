@@ -324,3 +324,4 @@ export function ScreenSetupPlates(props: IScreenSetupPlatesProps): JSX.Element {
     </View>
   );
 }
+

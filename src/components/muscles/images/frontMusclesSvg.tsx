@@ -104,3 +104,4 @@ export function FrontMusclesSvg(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

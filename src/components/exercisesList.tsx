@@ -275,3 +275,4 @@ const ExerciseItem = memo(function ExerciseItem(props: IExerciseItemProps): JSX.
     </MenuItemWrapper>
   );
 }, areExerciseItemPropsEqual);
+

@@ -1,7 +1,7 @@
 ---
 date: "2021-01-30"
 title: How I came to weightlifting
-og_title: How I came to weightlifting | Liftosaur blog
+og_title: How I came to weightlifting | VMR-Lift blog
 og_description: My journey to weightlifting
 og_image: /images/how-i-came-to-weightlifting-intro.jpg
 tags: ["weightlifting"]
@@ -72,14 +72,15 @@ By that time, I was already reading a lot of articles related to weightlifting, 
 
 It worked great! I liked that the pace is slower, but you steadily keep increasing weights every three weeks instead. I got used to Stronglifts 5x5 app though, it was simple yet very convenient - it increased or decreased the weights when appropriate, had all the necessary functionality. But it was designed specifically for Stronglifts 5x5, and you can't adjust it to any other program.
 
-### Liftosaur
+### VMR-Lift
 
 I wanted to find an app I could use for a long time, even if I change programs. I wanted to be able to tweak programs if necessary and couldn't find anything like that. Other apps were either designed for one specific routine (GZCLP, 5/3/1, etc.) or had a pack of popular routines, but none gave full flexibility in program editing. And it makes sense - to make it possible, you have to have full-grown, Turing-complete programming language built-in. I could do that. I'm a software engineer, so I can write an app with a built-in specialized programming language that allows you to express any possible weightlifting program. It will be shipped with popular weightlifting programs and will provide UI to make simple modifications in the routines. But, if you want to create something entirely new and nothing like before, you can always get to the lowest level and use the scripting language - Liftoscript!
 
-After about six months of building it during my spare time, it resulted in [Liftosaur](https://www.liftosaur.com/about)! I use it for tracking my lifts since April 2020, and it goes great (though I'm obviously biased). It also motivates me to keep working out since I could think of some feature, then implement it in the app, and then try it out during my own workouts.
+After about six months of building it during my spare time, it resulted in [VMR-Lift](http://myliftosaur.local:8081/about)! I use it for tracking my lifts since April 2020, and it goes great (though I'm obviously biased). It also motivates me to keep working out since I could think of some feature, then implement it in the app, and then try it out during my own workouts.
 
-I now have a way better picture of what it takes to start weightlifting, and if I started today, I'd probably start with the [Basic Beginner Routine](https://thefitness.wiki/routines/r-fitness-basic-beginner-routine/) and would follow the [thefitness.wiki](https://thefitness.wiki/) advice to switch to 5/3/1 for Beginners or GZCLP after three months (I wrote about it in my [last blogpost](https://www.liftosaur.com/blog/posts/how-to-start-weightlifting/))
+I now have a way better picture of what it takes to start weightlifting, and if I started today, I'd probably start with the [Basic Beginner Routine](https://thefitness.wiki/routines/r-fitness-basic-beginner-routine/) and would follow the [thefitness.wiki](https://thefitness.wiki/) advice to switch to 5/3/1 for Beginners or GZCLP after three months (I wrote about it in my [last blogpost](http://myliftosaur.local:8081/blog/posts/how-to-start-weightlifting/))
 
 Lifting weights is super fun. You feel powerful when you lift heavy weights, and you get your little wins pretty often. It's fun to chase numbers (the weight you lift, the reps you could do, etc.). There're many health benefits too, but it's hard to quantify them, and they look more like long-term goals, which I have a hard time to really care about. And you're looking better and better in the process (though that transformation is very slow, it takes years to really see the difference, so again - more like a long-term thing. If you see somebody sells you a three weeks program promising you'll look better at the end - it's a scam, you won't).
 
 So, here I am, 1.5 years in for now, and hopefully, it's just a start.
+

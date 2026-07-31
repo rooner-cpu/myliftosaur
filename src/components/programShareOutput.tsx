@@ -1,6 +1,5 @@
 import { JSX, ReactNode, Ref, forwardRef, useState } from "react";
-import { View, LayoutChangeEvent } from "react-native";
-import { SvgUri } from "./primitives/svg";
+import { View, Image, LayoutChangeEvent } from "react-native";
 import { ISettings, IPlannerProgram, IPlannerProgramWeek, IPlannerProgramDay } from "../types";
 import { PlannerProgram_evaluate } from "../pages/planner/models/plannerProgram";
 import { StringUtils_pluralize } from "../utils/string";
@@ -18,7 +17,7 @@ import { CollectionUtils_compact, CollectionUtils_inGroupsOf } from "../utils/co
 import { ProgramQrCode } from "./programQrCode";
 import { Equipment_currentEquipment } from "../models/equipment";
 import { Text } from "./primitives/text";
-import { HostConfig_resolveUrl } from "../utils/hostConfig";
+import { BundledImages_resolve } from "../utils/bundledImages";
 
 export interface IProgramShareOutputOptions {
   showInfo: boolean;
@@ -150,8 +149,12 @@ export const ProgramShareOutput = forwardRef((props: IProgramShareOutputProps, r
           );
         })}
         <View className="flex-row items-center justify-end mt-1">
-          <SvgUri uri={HostConfig_resolveUrl("/images/logo.svg")} width={24} height={24} style={{ marginRight: 4 }} />
-          <Text className="text-sm font-bold">Liftosaur</Text>
+          <Image
+            source={BundledImages_resolve("/images/vmr-lift-logo.webp")}
+            style={{ width: 24, height: 24, marginRight: 4 }}
+            resizeMode="contain"
+          />
+          <Text className="text-sm font-bold">VMR-Lift</Text>
         </View>
       </View>
     </View>
@@ -392,3 +395,4 @@ export function Progression(props: IProgressionProps): JSX.Element | null {
       );
   }
 }
+

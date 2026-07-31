@@ -58,3 +58,4 @@ export function WorkoutShareOutputWithBg(props: IWorkoutShareOutputWithBgProps):
     </View>
   );
 }
+

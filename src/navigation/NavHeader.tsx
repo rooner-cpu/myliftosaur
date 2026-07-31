@@ -61,3 +61,4 @@ export function NavHeader(props: IHeaderProps): JSX.Element | null {
     </View>
   );
 }
+

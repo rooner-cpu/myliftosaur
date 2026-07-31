@@ -25,3 +25,4 @@ export {
   SvgUri,
 } from "react-native-svg";
 export type { SvgProps } from "react-native-svg";
+

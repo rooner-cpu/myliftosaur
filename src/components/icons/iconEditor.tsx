@@ -23,3 +23,4 @@ export function IconEditor(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

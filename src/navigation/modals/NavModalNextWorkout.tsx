@@ -34,3 +34,4 @@ export function NavModalNextWorkout(): JSX.Element {
     </SheetScreenContainer>
   );
 }
+

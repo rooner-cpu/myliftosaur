@@ -24,3 +24,4 @@ export function IconLink(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

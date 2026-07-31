@@ -29,3 +29,4 @@ export function renderLogsHtml(data: IProps): string {
     </AdminHtml>
   );
 }
+

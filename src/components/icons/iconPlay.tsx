@@ -29,3 +29,4 @@ export function IconPlay(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

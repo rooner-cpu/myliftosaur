@@ -588,3 +588,4 @@ export const LineChart = forwardRef<ILineChartHandle, ILineChartProps>(function 
     </View>
   );
 });
+

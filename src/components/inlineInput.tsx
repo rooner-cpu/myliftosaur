@@ -43,3 +43,4 @@ export function InlineInput(props: IInlineInputProps): JSX.Element {
     />
   );
 }
+

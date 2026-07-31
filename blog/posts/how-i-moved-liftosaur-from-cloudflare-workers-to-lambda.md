@@ -1,8 +1,8 @@
 ---
 date: "2021-06-22"
-title: How I moved Liftosaur from Cloudflare Workers to AWS Lambda
-og_title: How I moved Liftosaur from Cloudflare Workers to AWS Lambda | Liftosaur blog
-og_description: Why did I move Liftosaur to Cloudflare, the process, obstacles, the result, and also the starter skeleton.
+title: How I moved VMR-Lift from Cloudflare Workers to AWS Lambda
+og_title: How I moved VMR-Lift from Cloudflare Workers to AWS Lambda | VMR-Lift blog
+og_description: Why did I move VMR-Lift to Cloudflare, the process, obstacles, the result, and also the starter skeleton.
 og_image: /images/how-i-moved-liftosaur-from-cloudflare-workers-to-lambda-intro.png
 tags: ["tech"]
 twitter: https://twitter.com/anton_astashov/status/1407492861566783489
@@ -11,11 +11,11 @@ reddit: https://www.reddit.com/r/liftosaur/comments/o614tg/how_i_moved_liftosaur
 
 <div><img src="../../images/how-i-moved-liftosaur-from-cloudflare-workers-to-lambda-intro.png" width="100%" alt="From Cloudflare Workers to AWS Lambda" /></div>
 
-**TLDR; - I moved Liftosaur from Cloudflare Workers to AWS Lambda + Dynamo. It wasn't easy, especially it was bad because of poor local development environment. I built a skeleton to simplify that process for other folks who'd need to start a project in AWS - [https://github.com/astashov/aws-cdk-lambda-typescript-starter](https://github.com/astashov/aws-cdk-lambda-typescript-starter).**
+**TLDR; - I moved VMR-Lift from Cloudflare Workers to AWS Lambda + Dynamo. It wasn't easy, especially it was bad because of poor local development environment. I built a skeleton to simplify that process for other folks who'd need to start a project in AWS - [https://github.com/astashov/aws-cdk-lambda-typescript-starter](https://github.com/astashov/aws-cdk-lambda-typescript-starter).**
 
 ## Everything started with Cloudflare Workers
 
-When I initially was choosing a hosting for server-side part of Liftosaur, I decided to go with Cloudflare
+When I initially was choosing a hosting for server-side part of VMR-Lift, I decided to go with Cloudflare
 Workers. I liked the idea - you write a service worker, and then run it in a cloud. And there was a bunch of
 other benefits too:
 
@@ -42,9 +42,9 @@ Eventually, all that became unbearable. I was planning a big new feature (add Fr
 
 ## Moving to AWS
 
-I began to think where I could migrate Liftosaur to, and still pay no more than \$5 a month. Would be nice to have a richer set of features, and especially decent database, backups, logging and monitoring. I already had some parts in AWS (e.g. lambdas for the image generators for social media), so decided to check if AWS would address some of the aforementioned issues.
+I began to think where I could migrate VMR-Lift to, and still pay no more than \$5 a month. Would be nice to have a richer set of features, and especially decent database, backups, logging and monitoring. I already had some parts in AWS (e.g. lambdas for the image generators for social media), so decided to check if AWS would address some of the aforementioned issues.
 
-To stay under \$5 a month, in AWS I had to use on-demand payment policies, since Liftosaur traffic is pretty small. Any relational database costs way more than that, but e.g. document database DynamoDB could be within that price range. Moreover, it supports queries, secondary indexes, backups each second (sic!), there's built-in monitoring and logging. To run the server code, EC2 instances were a bit too expensive, but on-demand Lambdas are pretty cheap. Another benefit is that they're pretty similar to Cloudflare Workers (except they're regular Node apps, not Service Workers apps) - you don't have to manage the actual instances. Also, they come with logging/monitoring via Cloudwatch out-of-the-box.
+To stay under \$5 a month, in AWS I had to use on-demand payment policies, since VMR-Lift traffic is pretty small. Any relational database costs way more than that, but e.g. document database DynamoDB could be within that price range. Moreover, it supports queries, secondary indexes, backups each second (sic!), there's built-in monitoring and logging. To run the server code, EC2 instances were a bit too expensive, but on-demand Lambdas are pretty cheap. Another benefit is that they're pretty similar to Cloudflare Workers (except they're regular Node apps, not Service Workers apps) - you don't have to manage the actual instances. Also, they come with logging/monitoring via Cloudwatch out-of-the-box.
 
 AWS Lambdas has a concept of layers (something similar to Docker ones, I guess?), so you can move all the `node_modules` into a layer, and the actual size of your server code would be significantly smaller. And for caches, I could just use S3 for now.
 
@@ -71,7 +71,7 @@ Another nice thing that I'm paying only **~\$2.5/month** for all of this now, so
 
 ## Starter skeleton for TypeScript/React projects on AWS Lambda
 
-Migration to AWS wasn't that easy. I had some experience in AWS before, but mostly around EC2s, not Lambdas. It took me a while to figure out how to properly setup the infrastructure, how to describe it all in CDK, how to make it as cheap as possible for a low-traffic site like Liftosaur, how to set up local development environment properly, and multi-environment development in general.
+Migration to AWS wasn't that easy. I had some experience in AWS before, but mostly around EC2s, not Lambdas. It took me a while to figure out how to properly setup the infrastructure, how to describe it all in CDK, how to make it as cheap as possible for a low-traffic site like VMR-Lift, how to set up local development environment properly, and multi-environment development in general.
 
 To help other folks with that, and provide some template for cheap hosting on AWS Lambdas, I created a starter skeleton for the TypeScript/React projects on AWS Lambda and Dynamo. Here it is:
 
@@ -91,3 +91,4 @@ There, you can find:
 IMHO it's pretty convenient for various small-traffic websites, pet projects, etc - you can start from it, and modify the CDK template if necessary to add more services if necessary (like email services, queues, etc).
 
 So, try it out, hopefully you'll find it useful!
+

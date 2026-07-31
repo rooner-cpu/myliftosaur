@@ -387,3 +387,4 @@ export function useLineChartGestures(args: ILineChartGesturesArgs): ILineChartGe
 
   return { Wrap, frozen, clearFrozen };
 }
+

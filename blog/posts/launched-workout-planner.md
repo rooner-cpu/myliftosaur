@@ -1,9 +1,9 @@
 ---
 date: "2023-09-13"
 title: Launched Workout planner!
-og_title: Launched Workout planner! | Liftosaur blog
+og_title: Launched Workout planner! | VMR-Lift blog
 og_image: /images/workout-planner-hero-2.png
-og_description: "Description of a workout planner, that helps you design weightlifting programs and run them on Liftosaur"
+og_description: "Description of a workout planner, that helps you design weightlifting programs and run them on VMR-Lift"
 tags: ["tech", "weightlifting"]
 ---
 
@@ -15,9 +15,9 @@ A couple months ago [I wrote](../workout-planner) about the idea of building a w
 
 I believe it's an amazing tool for building weightlifting programs. It's a great way to visualize your programs, and see if you have enough volume per muscle group, and if you're hitting them with enough frequency. Hopefully it'll become a starting point for people to build their programs, especially for those who don't want to mess with coding.
 
-It allows you to plan programs, make sure you have enough weekly volume per muscle group, and can balance it with workout time. You can build multiweek programs, and it'll show weekly undulating of volume and intensity per exercise on a graph. And you can export the program to the Liftosaur app, making it a way faster way to build Liftosaur programs.
+It allows you to plan programs, make sure you have enough weekly volume per muscle group, and can balance it with workout time. You can build multiweek programs, and it'll show weekly undulating of volume and intensity per exercise on a graph. And you can export the program to the VMR-Lift app, making it a way faster way to build VMR-Lift programs.
 
-It's not as flexible as the Liftosaur's built-in program editor, but it's a lot faster to build programs with it, and it probably be enough for like 80% of use cases. And you can always do the final tweaks in Liftosaur if needed.
+It's not as flexible as the VMR-Lift's built-in program editor, but it's a lot faster to build programs with it, and it probably be enough for like 80% of use cases. And you can always do the final tweaks in VMR-Lift if needed.
 
 **If you would prefer to watch the video instead, here's how I use Planner to build a program**
 
@@ -77,7 +77,7 @@ Or you can specify the weight in kg/lb, like this:
 Bench Press / 3x12 60kg
 {% endplannercode %}
 
-If you specify the weight in kgs though, it'd be static, and not tied to the `state.weight` state variable when you convert it into Liftosaur program.
+If you specify the weight in kgs though, it'd be static, and not tied to the `state.weight` state variable when you convert it into VMR-Lift program.
 
 RPE, percentage and weight can be specified for each set or range of sets individually, so you can mix and match:
 
@@ -114,7 +114,7 @@ Bench Press, dumbbell / 3x5
 
 ## How to read stats
 
-The planner shows you daily and weekly number of sets per muscle group, per movement type and split between "strength" and "hypertrophy" sets. As an example, this is [Workout Planner for the GZCLP program](https://www.liftosaur.com/n/2dbed2bc).
+The planner shows you daily and weekly number of sets per muscle group, per movement type and split between "strength" and "hypertrophy" sets. As an example, this is [Workout Planner for the GZCLP program](http://myliftosaur.local:8081/n/2dbed2bc).
 Let's take a look at the **Week Stats** section. It looks like this:
 
 <p class="markdown-body-pre">
@@ -144,7 +144,7 @@ There're also Day Stats, that show up if you click on the workout text field. Mu
 
 ## Specifying progressive overload
 
-You can specify the progressive overload for each exercise. It won't affect the weekly volume stats, but it'll be added when you export a program to Liftosaur. For now, there're 3 types of progressive overload:
+You can specify the progressive overload for each exercise. It won't affect the weekly volume stats, but it'll be added when you export a program to VMR-Lift. For now, there're 3 types of progressive overload:
 
 - Linear Progression (**lp**) - increase or decrease the weight by a fixed amount or percentage after N attempts.
 - Double Progression (**dp**) - increase the reps within a range, then reset the reps and increase the weight.
@@ -217,8 +217,9 @@ Leg Extension / 2x12-15
 Cable Crunch / 2x12-15
 {% endplannercode %}
 
-## Exporting to Liftosaur
+## Exporting to VMR-Lift
 
-When you're done and would like to export this program to Liftosaur, press that big purple button <strong>"Convert to Liftosaur program"</strong>. That will generate a link and copy it to the clipboard. You then can go to Liftosaur, and paste that link into the "Import link" field on the Choose Program screen. And that's it!
+When you're done and would like to export this program to VMR-Lift, press that big purple button <strong>"Convert to VMR-Lift program"</strong>. That will generate a link and copy it to the clipboard. You then can go to VMR-Lift, and paste that link into the "Import link" field on the Choose Program screen. And that's it!
 
 Check it out, and hopefully you'll find this new Workout Planner useful!
+

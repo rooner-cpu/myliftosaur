@@ -32,3 +32,4 @@ export function PlannerWeekMuscles(props: IPlannerMusclesProps): JSX.Element {
     </View>
   );
 }
+

@@ -207,3 +207,4 @@ function WorkoutExerciseInner(props: IWorkoutExerciseProps): JSX.Element {
 }
 
 export const WorkoutExercise = memo(WorkoutExerciseInner);
+

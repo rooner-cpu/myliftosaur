@@ -362,3 +362,4 @@ function SettingsTab(props: ISettingsTabProps): JSX.Element {
     </View>
   );
 }
+

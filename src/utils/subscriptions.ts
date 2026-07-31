@@ -1,4 +1,5 @@
-import { Service } from "../api/service";
+import { Service } from "../api/service";
+import { Standalone_localMode } from "../config/standalone";
 import { IDispatch } from "../ducks/types";
 import { IState, updateState } from "../models/state";
 import { lb } from "lens-shmens";
@@ -8,7 +9,11 @@ import { CollectionUtils_removeBy } from "./collection";
 import { Thunk_postevent } from "../ducks/thunks";
 
 export function Subscriptions_hasSubscription(subscription: ISubscription): boolean {
-  if (subscription.key && subscription.key !== "unclaimed") {
+  
+  if (Standalone_localMode) {
+    return true;
+  }
+if (subscription.key && subscription.key !== "unclaimed") {
     return true;
   }
   const hasApple = hasAppleSubscription(subscription);
@@ -197,3 +202,4 @@ export function Subscriptions_verifyGooglePurchaseToken(
     return Promise.resolve(false);
   }
 }
+

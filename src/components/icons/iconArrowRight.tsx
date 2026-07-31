@@ -19,3 +19,4 @@ export function IconArrowRight(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

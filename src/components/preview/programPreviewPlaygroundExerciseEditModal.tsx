@@ -156,3 +156,4 @@ function ProgramStateVariables(props: IStateProps): JSX.Element {
     </View>
   );
 }
+

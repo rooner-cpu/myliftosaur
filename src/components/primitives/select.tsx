@@ -23,3 +23,4 @@ export function Select(props: ISelectProps): JSX.Element {
     props.options.map((o) => React.createElement("option", { key: o.value, value: o.value }, o.label))
   );
 }
+

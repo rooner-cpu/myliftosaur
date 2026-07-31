@@ -36,3 +36,4 @@ export function IconInstagramFlat(props: IProps): JSX.Element {
     </svg>
   );
 }
+

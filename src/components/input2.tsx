@@ -120,3 +120,4 @@ export const Input2 = forwardRef((props: IProps, ref: Ref<HTMLInputElement>): JS
     </div>
   );
 });
+

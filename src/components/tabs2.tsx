@@ -47,3 +47,4 @@ export function Tabs2(props: IProps): JSX.Element {
     </View>
   );
 }
+

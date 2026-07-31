@@ -316,3 +316,4 @@ Stiff Leg Deadlift / 1x6+ (Heavy) 155lb 120s, 1x10+ (Back-off) 135lb / progress:
 // ...dc2
 Leg Press / 1x6+ (Heavy) 270lb 180s, 1x20 (Widowmkr) 180lb / progress: custom(inc1: 10lb, upper1: 8, upper2: 20, inc2: 5lb) { ...dc2 }
 ```
+

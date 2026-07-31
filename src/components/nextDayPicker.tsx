@@ -206,3 +206,4 @@ export function NextDayPicker(props: INextDayPickerProps): JSX.Element {
     </View>
   );
 }
+

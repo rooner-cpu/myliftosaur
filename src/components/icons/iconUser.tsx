@@ -30,3 +30,4 @@ export function IconUser(props: IProps): JSX.Element {
     </svg>
   );
 }
+

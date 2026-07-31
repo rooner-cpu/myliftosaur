@@ -55,3 +55,4 @@ export function NavModalWhatsnew(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

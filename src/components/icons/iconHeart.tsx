@@ -23,3 +23,4 @@ export function IconHeart(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

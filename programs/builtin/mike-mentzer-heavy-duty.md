@@ -194,3 +194,4 @@ Lying Leg Curl / 1x8 / 60lb / warmup: none / progress: dp(5lb, 8, 15)
 Standing Calf Raise / 1x12 / 35lb / warmup: none / progress: dp(5lb, 12, 20)
 Crunch / 1x8 / 0lb / warmup: none / progress: dp(5lb, 8, 15)
 ```
+

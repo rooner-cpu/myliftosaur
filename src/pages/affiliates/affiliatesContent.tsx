@@ -9,8 +9,8 @@ export function AffiliatesContent(props: IAffiliatesContentProps): JSX.Element {
     <section className="p-4">
       <h1 className="text-2xl font-bold">Affiliate Program</h1>
       <p className="mt-4">
-        Liftosaur offers an affiliate program. If you're a coach, a trainer, or an influencer, you can earn commission
-        by offering your weightlifting program on Liftosaur.
+        VMR-Lift offers an affiliate program. If you're a coach, a trainer, or an influencer, you can earn commission
+        by offering your weightlifting program on VMR-Lift.
       </p>
 
       <p className="mt-4">
@@ -22,10 +22,10 @@ export function AffiliatesContent(props: IAffiliatesContentProps): JSX.Element {
       <ul className="mt-4 ml-4 list-disc">
         <li>
           Your create your weightlifting program on a laptop (by visiting{" "}
-          <a target="_blank" className="font-bold underline text-text-link" href="https://www.liftosaur.com/program">
-            liftosaur.com/program
+          <a target="_blank" className="font-bold underline text-text-link" href="http://myliftosaur.local:8081/program">
+            VMR-Lift Program Editor
           </a>
-          ), or on a phone (by installing the <strong>Liftosaur</strong> app and creating a program there)
+          ), or on a phone (by installing the <strong>VMR-Lift</strong> app and creating a program there)
         </li>
         <li>You copy the link to the program.</li>
         <li>You share the link with your users/customers/clients/fans.</li>
@@ -35,11 +35,13 @@ export function AffiliatesContent(props: IAffiliatesContentProps): JSX.Element {
 
       <p className="mt-4">
         Interested? Shoot us an email -{" "}
-        <a className="font-bold underline text-text-link" href="mailto:info@liftosaur.com">
-          info@liftosaur.com
+        <a className="font-bold underline text-text-link" href="mailto:rooner@gmail.com">
+          rooner@gmail.com
         </a>
         . Also let us know if you need help with creating a program.
       </p>
     </section>
   );
 }
+
+

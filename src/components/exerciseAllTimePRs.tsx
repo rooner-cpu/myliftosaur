@@ -75,3 +75,4 @@ function ExerciseAllTimePRsInner(props: IExerciseAllTimePRsProps): JSX.Element {
 }
 
 export const ExerciseAllTimePRs = memo(ExerciseAllTimePRsInner);
+

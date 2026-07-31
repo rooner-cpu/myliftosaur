@@ -272,3 +272,4 @@ function WorkoutExerciseAllSetsInner(props: IWorkoutExerciseAllSets): JSX.Elemen
 }
 
 export const WorkoutExerciseAllSets = memo(WorkoutExerciseAllSetsInner);
+

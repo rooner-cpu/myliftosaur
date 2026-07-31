@@ -378,3 +378,4 @@ function WebappShare(props: IWebappShareProps): JSX.Element {
     </View>
   );
 }
+

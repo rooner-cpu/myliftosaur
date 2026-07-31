@@ -183,3 +183,4 @@ Bench Press / ...main / 45lb
 Bent Over Row / ...main / 95lb
 Deadlift / 1x5+ / 95lb / progress: custom(increase: 5lb) { ...main }
 ```
+

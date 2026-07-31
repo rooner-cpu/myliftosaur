@@ -40,7 +40,7 @@ export const workoutTourConfig: ITourConfig = {
   steps: [
     {
       id: "howItWorks",
-      title: "How Liftosaur works",
+      title: "How VMR-Lift works",
       dino: "dinocoach.svg",
       content: () => (
         <>
@@ -241,3 +241,5 @@ export const workoutTourConfig: ITourConfig = {
     },
   ],
 };
+
+

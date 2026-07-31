@@ -21,3 +21,4 @@ export function IconPlus2(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

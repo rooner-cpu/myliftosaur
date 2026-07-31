@@ -191,3 +191,4 @@ Bench Press Close Grip / 3x8 / 45lb / 90s / progress: lp(2.5lb, 1, 0, 10%, 2, 0)
 Bicep Curl, Barbell / 3x8 / 45lb / 90s
 Cable Crunch / 3x10 / 30lb / 90s
 ```
+

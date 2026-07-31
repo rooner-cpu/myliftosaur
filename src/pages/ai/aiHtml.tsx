@@ -18,10 +18,10 @@ export function AiHtml(props: IAiHtmlProps): JSX.Element {
       css={["ai"]}
       js={["ai"]}
       maxWidth={1280}
-      title="Liftosaur AI generator | Liftosaur"
+      title="VMR-Lift AI generator | VMR-Lift"
       description="Convert any workout program to Liftoscript format using AI. Support for spreadsheets, documents, and text descriptions."
-      canonical="https://www.liftosaur.com/ai"
-      ogUrl="https://www.liftosaur.com/ai"
+      canonical="http://myliftosaur.local:8081/ai"
+      ogUrl="http://myliftosaur.local:8081/ai"
       data={props}
       url="/ai"
     >
@@ -29,3 +29,4 @@ export function AiHtml(props: IAiHtmlProps): JSX.Element {
     </Page>
   );
 }
+

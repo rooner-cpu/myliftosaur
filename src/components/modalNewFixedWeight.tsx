@@ -53,3 +53,4 @@ export function ModalNewFixedWeightContent(props: IProps): JSX.Element {
     </View>
   );
 }
+

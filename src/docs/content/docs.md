@@ -2,7 +2,7 @@
 
 ## Contact Us
 
-If you have any questions, don't hesitate to contact us at <a href="mailto:info@liftosaur.com">info@liftosaur.com</a>!
+If you have any questions, don't hesitate to contact us at <a href="mailto:rooner@gmail.com">rooner@gmail.com</a>!
 
 ## Workouts
 
@@ -31,7 +31,7 @@ Check out this video if you get stuck, it replicates what's written below.
 
 ### State Variables and Finish Day Script
 
-Let's start with creating our own simple workout. Open <a href="https://www.liftosaur.com">www.liftosaur.com</a> (you may want to use laptop or desktop computer for that, not a phone, so you'd have access to keyboard. It's not required, but in my opinion - way more handy). Press "Pick or Create a Program", and then press "Create Program" button in the footer. Let's name it "Liftosaurus".
+Let's start with creating our own simple workout. Open <a href="http://myliftosaur.local:8081">VMR-Lift</a> (you may want to use laptop or desktop computer for that, not a phone, so you'd have access to keyboard. It's not required, but in my opinion - way more handy). Press "Pick or Create a Program", and then press "Create Program" button in the footer. Let's name it "VMR Starter".
 
 Now, press the edit icon at "Day 1" item, and then press the "Create New Exercise" button to add an exercise. There, switch to "Advanced" tab. In the "Exercise" field select "Bench Press".
 
@@ -54,13 +54,13 @@ This means that when we finish a day, we're going to add 5lb to the previous val
 
 You can use any state variables you defined, both in "Finish Day Script" or in the expressions for weight or number of reps for an exercise, by prefixing them with `state.`, like you see in the example above.
 
-You may notice that the weight value gets rounded if you use some math operators. Liftosaur always rounds the weight so you could get it using your available plates. So, please make sure the "Available Equipment" in "Settings" correctly reflect the plates you have access to in your gym.
+You may notice that the weight value gets rounded if you use some math operators. VMR-Lift always rounds the weight so you could get it using your available plates. So, please make sure the "Available Equipment" in "Settings" correctly reflect the plates you have access to in your gym.
 
 Under "Finish Day Script" there's a Playground section. There, you could see the "State Changes" section, which should show something like `weight: 50lb -> 55lb` - it should how the state variable are going to change after we finish the day. It says that the `weight` state variable will be increased by `5lb`, which is exactly what we want.
 
 Now, scroll to the very bottom and press "Save". You'll get back to the day editing screen. In the "Available Exercises" you'll see our new "Bench Press" exercise. Press it, and it should appear in the "Selected exercises". That means our first day now has this exercise added.
 
-You can give it a try now - go back to the list of days, and then go back to the "Choose Program" screen. There, click on our new "Liftosaurus" program to select it. Click on "Start Workout" at the footer, then click on "Finish the workout". You'll see that for the next workout, the weight will be 50lb now.
+You can give it a try now - go back to the list of days, and then go back to the "Choose Program" screen. There, click on our new "VMR Starter" program to select it. Click on "Start Workout" at the footer, then click on "Finish the workout". You'll see that for the next workout, the weight will be 50lb now.
 
 ### Conditional logic
 
@@ -376,3 +376,5 @@ state.biggest = max(2, 7, 5);
 state.highest = max(reps, completedReps);
 state.floored = max(1, completedReps);
 ```
+
+

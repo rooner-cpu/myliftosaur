@@ -23,3 +23,4 @@ export function IconReorder(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

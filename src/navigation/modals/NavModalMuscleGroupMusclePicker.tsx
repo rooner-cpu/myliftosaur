@@ -81,3 +81,4 @@ export function NavModalMuscleGroupMusclePicker(): JSX.Element {
     </SheetScreenContainer>
   );
 }
+

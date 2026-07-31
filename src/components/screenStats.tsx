@@ -540,3 +540,4 @@ function StatInput(props: IStatInputProps): JSX.Element {
     />
   );
 }
+

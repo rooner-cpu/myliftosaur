@@ -23,3 +23,4 @@ export function IconCog2(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

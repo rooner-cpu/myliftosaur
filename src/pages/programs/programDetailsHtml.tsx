@@ -18,8 +18,8 @@ interface IProps {
 export function ProgramDetailsHtml(props: IProps): JSX.Element {
   const { program, indexEntry } = props;
   const { client, isLoggedIn, ...data } = props;
-  const title = `${program.name} Workout Program - Free Tracker & Guide | Liftosaur`;
-  const url = `https://www.liftosaur.com/programs/${program.id}`;
+  const title = `${program.name} Workout Program - Free Tracker & Guide | VMR-Lift`;
+  const url = `http://myliftosaur.local:8081/programs/${program.id}`;
   const description = buildMetaDescription(program, indexEntry);
   const faqEntries = props.faq ? parseFaqMarkdown(props.faq) : [];
   const jsonLd = buildJsonLd(program, indexEntry, url, description, faqEntries);
@@ -33,7 +33,7 @@ export function ProgramDetailsHtml(props: IProps): JSX.Element {
       ogDescription={description}
       canonical={url}
       ogUrl={url}
-      ogImage={`https://www.liftosaur.com/programimage/${program.id}`}
+      ogImage={`http://myliftosaur.local:8081/programimage/${program.id}`}
       jsonLd={jsonLd}
       maxWidth={1200}
       maxBodyWidth={10000}
@@ -83,9 +83,9 @@ export function parseFaqMarkdown(faqMd: string): IJsonLdFAQEntry[] {
 function buildMetaDescription(program: IProgram, indexEntry?: IProgramIndexEntry): string {
   const short = indexEntry?.shortDescription || program.shortDescription || program.description;
   if (!short) {
-    return `${program.name} workout program - exercises, sets, reps, muscles worked, and progressive overload. Free on Liftosaur.`;
+    return `${program.name} workout program - exercises, sets, reps, muscles worked, and progressive overload. Free on VMR-Lift.`;
   }
-  const suffix = ` Free on Liftosaur.`;
+  const suffix = ` Free on VMR-Lift.`;
   const maxLen = 155 - suffix.length;
   const trimmed = short.length > maxLen ? short.substring(0, maxLen - 3) + "..." : short;
   return trimmed + suffix;
@@ -103,7 +103,7 @@ function buildJsonLd(
     headline: `${program.name} Workout Program`,
     description,
     author: program.author,
-    image: `https://www.liftosaur.com/programimage/${program.id}`,
+    image: `http://myliftosaur.local:8081/programimage/${program.id}`,
     mainEntityOfPage: url,
     ...(indexEntry?.datePublished ? { datePublished: indexEntry.datePublished } : {}),
     ...(indexEntry?.dateModified ? { dateModified: indexEntry.dateModified } : {}),
@@ -112,18 +112,18 @@ function buildJsonLd(
   const breadcrumbs: IJsonLd = {
     type: "BreadcrumbList",
     items: [
-      { name: "Home", url: "https://www.liftosaur.com" },
-      { name: "Programs", url: "https://www.liftosaur.com/programs" },
+      { name: "Home", url: "http://myliftosaur.local:8081" },
+      { name: "Programs", url: "http://myliftosaur.local:8081/programs" },
       { name: `${program.name} Program` },
     ],
   };
 
   const app: IJsonLd = {
     type: "SoftwareApplication",
-    name: `Liftosaur - ${program.name} Tracker`,
+    name: `VMR-Lift - ${program.name} Tracker`,
     applicationCategory: "HealthApplication",
     operatingSystem: "iOS, Android, Web",
-    url: "https://www.liftosaur.com",
+    url: "http://myliftosaur.local:8081",
     price: "0",
     priceCurrency: "USD",
     ...(indexEntry?.frequency
@@ -137,3 +137,4 @@ function buildJsonLd(
   }
   return result;
 }
+

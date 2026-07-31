@@ -1,8 +1,8 @@
 ---
 date: "2024-01-25"
 title: New Experimental Program Editor
-og_title: New Experimental Program Editor | Liftosaur blog
-og_description: New Experimental Program Editor combines Workout Planner + Liftoscript, and makes writing Liftosaur programs way faster.
+og_title: New Experimental Program Editor | VMR-Lift blog
+og_description: New Experimental Program Editor combines Workout Planner + Liftoscript, and makes writing VMR-Lift programs way faster.
 og_image: /images/new-experimental-program-editor-intro.jpg
 tags: ["weightlifting", "tech"]
 reddit: https://www.reddit.com/r/liftosaur/comments/1acnvmt/new_experimetal_programs_aka_inapp_workout/
@@ -11,15 +11,15 @@ twitter: https://twitter.com/liftosaur/status/1751384940040601772
 
 <div><img src="../../images/new-experimental-program-editor-intro.jpg" width="100%" alt="Buff guy writing notes" /></div>
 
-In the latest post I tried to [envision](/blog/posts/combine-workout-planner-and-liftoscript/) what would it take to combine Planner syntax with Liftoscript, and write Liftosaur programs using that new syntax. And it's finally here!
+In the latest post I tried to [envision](/blog/posts/combine-workout-planner-and-liftoscript/) what would it take to combine Planner syntax with Liftoscript, and write VMR-Lift programs using that new syntax. And it's finally here!
 
 IMHO it worked out amazingly! I really like the new syntax, IMHO it makes it WAAAY simpler to write programs, they're easier to comprehend. Each program is essentially just a blob of text, it's easy to share it, edit it, etc. I can't wait to see what y'all going to create in it! :)
 
-So, there's now a way to create "experimental" Liftosaur program - if you select "Create experimental program" in the
+So, there's now a way to create "experimental" VMR-Lift program - if you select "Create experimental program" in the
 program creation modal in the app. There, you use Workout Planner syntax to create those new programs - you just type
 exercises and sets x reps you want to have.
 
-<div style="text-align: center"><img src="../../images/new-experimental-program-editor-create.png" width="300" alt="Liftosaur screen to create new experimental program" /></div>
+<div style="text-align: center"><img src="../../images/new-experimental-program-editor-create.png" width="300" alt="VMR-Lift screen to create new experimental program" /></div>
 
 I described it in one of the previous posts, but will quickly remind you here.
 
@@ -233,7 +233,7 @@ Squat / 5x5 / warmup: none
 
 ## New syntax
 
-The new experimental programs work somewhat different from the former Liftosaur programs.
+The new experimental programs work somewhat different from the former VMR-Lift programs.
 
 Previously, it was all about state variables. You can define them, and use them in weights, reps, timer, etc. And by changing them in the Finish Day Script, you can program progressive overload.
 
@@ -286,7 +286,7 @@ Bench Press / 5x7 / 110lb 90s @8 / progress: custom() {~
 ~}
 {% endplannercode %}
 
-Similar to old Liftosaur programs, you can specify set variations. You don't need to use them for various weeks/days like in the old editor, it's more for falling back to other set schemes e.g. if you failed to finish sets.
+Similar to old VMR-Lift programs, you can specify set variations. You don't need to use them for various weeks/days like in the old editor, it's more for falling back to other set schemes e.g. if you failed to finish sets.
 
 To add set variations, just list sets x reps in another section, like this:
 
@@ -519,14 +519,15 @@ Once you get familiar with the syntax, it's IMHO pretty easy to figure out how i
 
 ## App Changes
 
-The edit program screen now looks very different from regular Liftosaur editor, and very similar to the Workout Planner web page. Similarly to the Workout Planner, you can see weekly/daily volume per muscle group, exercise intensity/volume undulation graphs week over week. You can also test your changes in program preview. It allows you to quickly simulate various scenarios, and make sure the logic you defined works as expected.
+The edit program screen now looks very different from regular VMR-Lift editor, and very similar to the Workout Planner web page. Similarly to the Workout Planner, you can see weekly/daily volume per muscle group, exercise intensity/volume undulation graphs week over week. You can also test your changes in program preview. It allows you to quickly simulate various scenarios, and make sure the logic you defined works as expected.
 
 You can also switch to Full Program Mode there, and there's new UI for rearranging weeks and days.
 
-<div style="text-align: center"><img src="../../images/new-experimental-program-editor-edit-program.png" width="300" alt="Liftosaur screen to edit experimental programs" /></div>
+<div style="text-align: center"><img src="../../images/new-experimental-program-editor-edit-program.png" width="300" alt="VMR-Lift screen to edit experimental programs" /></div>
 
 Daily Stats and Exercise Graphs get enabled when you focus a cursor on specific day or exercise.
 
 ## Conclusion
 
-So, give it a try, and let me know what you think! I'm really excited about this new syntax and new capabilities it unlocks. That was a huge rewrite of the Liftosaur engine, so let me know if something got broken.
+So, give it a try, and let me know what you think! I'm really excited about this new syntax and new capabilities it unlocks. That was a huge rewrite of the VMR-Lift engine, so let me know if something got broken.
+

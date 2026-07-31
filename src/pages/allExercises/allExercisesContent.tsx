@@ -77,3 +77,4 @@ export function AllExercisesContent(props: IAllExercisesContentProps): JSX.Eleme
     </div>
   );
 }
+

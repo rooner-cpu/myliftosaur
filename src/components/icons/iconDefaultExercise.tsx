@@ -20,3 +20,4 @@ export function IconDefaultExercise(props: IProps = {}): JSX.Element {
     </Svg>
   );
 }
+

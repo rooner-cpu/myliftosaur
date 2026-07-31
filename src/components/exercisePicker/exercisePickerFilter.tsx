@@ -337,3 +337,4 @@ function FilterMuscles(props: IFilterMusclesProps): JSX.Element {
     </View>
   );
 }
+

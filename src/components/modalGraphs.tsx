@@ -364,3 +364,4 @@ const MuscleGroupPreview = memo(function MuscleGroupPreviewInner(props: {
     </View>
   );
 });
+

@@ -15,3 +15,4 @@ export function IconDuplicate2(): JSX.Element {
     </Svg>
   );
 }
+

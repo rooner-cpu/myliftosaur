@@ -318,3 +318,4 @@ export const MuscleGroupsView = memo(function MuscleGroupsView(props: IMuscleGro
     </View>
   );
 });
+

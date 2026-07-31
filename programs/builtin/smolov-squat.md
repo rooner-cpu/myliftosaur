@@ -322,3 +322,4 @@ Squat / 1x3 70%, 1x3 80%, 2x5 90%, 3x4 95% / 300s
 // **Final test day.** Build to a new squat 1RM. Set the weight you achieved and complete the set.
 Squat / 1x1 / 95% / 300s
 ```
+

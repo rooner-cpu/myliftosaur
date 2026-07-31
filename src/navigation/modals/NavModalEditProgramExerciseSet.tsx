@@ -70,3 +70,4 @@ export function NavModalEditProgramExerciseSet(): JSX.Element {
     </SheetScreenContainer>
   );
 }
+

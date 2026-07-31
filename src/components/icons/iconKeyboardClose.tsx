@@ -18,3 +18,4 @@ export function IconKeyboardClose(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

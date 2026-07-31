@@ -27,3 +27,4 @@ export function IconMagnifyingGlass(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

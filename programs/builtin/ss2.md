@@ -188,3 +188,4 @@ Squat / 3x5 / 45lb
 Overhead Press / 3x5 / 45lb / progress: lp(5lb, 1, 0, 10%, 2, 0)
 Power Clean / 5x3 / 95lb / progress: lp(5lb, 1, 0, 10%, 2, 0)
 ```
+

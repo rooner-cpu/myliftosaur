@@ -94,3 +94,4 @@ export class ScreenErrorBoundary extends Component<IProps, IState> {
     return this.props.children;
   }
 }
+

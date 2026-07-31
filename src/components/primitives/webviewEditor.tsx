@@ -24,3 +24,4 @@ export interface IWebviewEditorProps {
 export function WebviewEditor(_props: IWebviewEditorProps): React.JSX.Element {
   throw new Error("WebviewEditor is native-only; use PlannerEditorView / ScriptEditorView on web.");
 }
+

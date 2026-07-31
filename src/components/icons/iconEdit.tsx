@@ -15,3 +15,4 @@ export function IconEdit(props: { penColor: string; lineColor: string; size: num
     </svg>
   );
 }
+

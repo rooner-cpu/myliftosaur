@@ -31,3 +31,4 @@ export function IconSpeaker(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

@@ -20,3 +20,4 @@ export function PerfProfiler(props: IPerfProfilerProps): JSX.Element {
     </Profiler>
   );
 }
+

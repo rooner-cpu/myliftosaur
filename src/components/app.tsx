@@ -49,13 +49,17 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { navigationRef } from "../navigation/navigationRef";
 import { ScreenRemovalCleanup_subscribe } from "../navigation/screenRemovalCleanup";
-import { navigateToModal } from "../navigation/navigationService";
+import { navigateTo, navigateToModal } from "../navigation/navigationService";
 import { getCurrentScreenData } from "../navigation/navigationService";
 import { StateContext } from "../navigation/StateContext";
 import { TrackedStateProvider } from "../navigation/TrackedStateContext";
 import { ClickTrackingContext } from "../utils/clickTracking";
 import { AppNavigator } from "../navigation/AppNavigator";
 import type { IScreen } from "../models/screen";
+import { useVmrDatabaseStorage } from "../utils/useVmrDatabaseStorage";
+import { Standalone_localMode } from "../config/standalone";
+import { VmrDatabaseStatusProvider } from "../utils/vmrDatabaseStatus";
+import { VmrAuthScreen } from "./vmrAuthScreen";
 
 declare let Rollbar: RB;
 declare let __COMMIT_HASH__: string;
@@ -105,6 +109,7 @@ export function AppView(props: IProps): JSX.Element | null {
   const onActions = useMemo(() => defaultOnActions(env), [env]);
   const [state, dispatch] = useThunkReducer<IState, IAction, IEnv>(reducer, props.initialState, env, onActions);
   const stateRef = useRef<IState>(state);
+  const vmrDatabaseState = useVmrDatabaseStorage(state, dispatch);
   useEffect(() => {
     stateRef.current = state;
   });
@@ -126,6 +131,45 @@ export function AppView(props: IProps): JSX.Element | null {
   useLoopCatcher();
 
   const [isNavReady, setIsNavReady] = useState(false);
+  const [hasDatabaseLoaded, setHasDatabaseLoaded] = useState(!Standalone_localMode);
+  const didLeaveOnboardingAfterLogin = useRef(false);
+
+  useEffect(() => {
+    if (!Standalone_localMode) {
+      return;
+    }
+    if (vmrDatabaseState.account == null) {
+      setHasDatabaseLoaded(false);
+    } else if (vmrDatabaseState.status === "ready") {
+      setHasDatabaseLoaded(true);
+    }
+  }, [vmrDatabaseState.account, vmrDatabaseState.status]);
+
+  useEffect(() => {
+    if (
+      !Standalone_localMode ||
+      !isNavReady ||
+      didLeaveOnboardingAfterLogin.current ||
+      vmrDatabaseState.account == null ||
+      vmrDatabaseState.status === "checking" ||
+      vmrDatabaseState.status === "saving"
+    ) {
+      return;
+    }
+
+    const rootState = navigationRef.getRootState();
+    const currentRoot = rootState?.routes[rootState.index ?? 0]?.name;
+    if (currentRoot !== "onboarding") {
+      return;
+    }
+
+    didLeaveOnboardingAfterLogin.current = true;
+    if (state.storage.currentProgramId) {
+      navigateTo("main", undefined, { tab: "home" });
+    } else {
+      navigateTo("programselect", undefined, { tab: "program" });
+    }
+  }, [isNavReady, state.storage.currentProgramId, vmrDatabaseState.account, vmrDatabaseState.status]);
 
   const prevShouldShowWhatsNew = useRef(false);
   useEffect(() => {
@@ -184,6 +228,9 @@ export function AppView(props: IProps): JSX.Element | null {
   };
 
   useEffect(() => {
+    if (Standalone_localMode && !hasDatabaseLoaded) {
+      return;
+    }
     const url =
       typeof window !== "undefined" ? UrlUtils_build(window.location.href, "https://liftosaur.com") : undefined;
     const urlUserId = url != null ? url.searchParams.get("userid") || undefined : undefined;
@@ -191,7 +238,10 @@ export function AppView(props: IProps): JSX.Element | null {
       const storageId = url != null ? url.searchParams.get("storageid") || undefined : undefined;
       dispatch(Thunk_fetchStorage(storageId));
     } else {
-      dispatch(Thunk_sync2({ force: true }));
+      // VMR standalone disables VMR-Lift cloud sync.
+      if (!Standalone_localMode) {
+        dispatch(Thunk_sync2({ force: true }));
+      }
     }
     window.addEventListener("click", (e) => {
       let button: HTMLElement | undefined;
@@ -232,7 +282,10 @@ export function AppView(props: IProps): JSX.Element | null {
       } else if (event.data?.type === "wake") {
         dispatch(Thunk_postevent("wake"));
         queue.clearStaleOperations();
-        dispatch(Thunk_sync2({ force: true }));
+        // VMR standalone disables VMR-Lift cloud sync.
+        if (!Standalone_localMode) {
+          dispatch(Thunk_sync2({ force: true }));
+        }
         dispatch(Thunk_syncHealthKit());
       } else if (event.data?.type === "syncToAppleHealthError") {
         dispatch(Thunk_postevent("apple-health-error"));
@@ -406,7 +459,7 @@ export function AppView(props: IProps): JSX.Element | null {
       window.removeEventListener("error", onerror);
       window.removeEventListener("unhandledrejection", onunhandledexception);
     };
-  }, []);
+  }, [hasDatabaseLoaded]);
 
   const onNavigationStateChange = useCallback((navState: NavigationState | undefined) => {
     const screenName = getScreenNameFromNavState(navState);
@@ -419,7 +472,7 @@ export function AppView(props: IProps): JSX.Element | null {
     typeof window !== "undefined" && window?.location
       ? !!UrlUtils_build(window.location.href).searchParams.get("skipintro")
       : false;
-  const initialScreen = props.initialState.storage.currentProgramId
+  const initialScreen = state.storage.currentProgramId
     ? "main"
     : shouldSkipIntro
       ? "programselect"
@@ -450,17 +503,23 @@ export function AppView(props: IProps): JSX.Element | null {
             <ClickTrackingContext.Provider value={dispatch}>
               <ModalStateProvider>
                 <ActiveSheetHeightProvider>
-                  <AppContext.Provider value={{ service, isApp: true }}>
-                    <NavigationContainer
-                      ref={navigationRef}
-                      onReady={() => setIsNavReady(true)}
-                      onStateChange={onNavigationStateChange}
-                      documentTitle={{ enabled: false }}
-                      theme={{ ...DefaultTheme, colors: { ...DefaultTheme.colors, background: "transparent" } }}
-                    >
-                      <AppNavigator initialScreen={initialScreen} />
-                    </NavigationContainer>
-                  </AppContext.Provider>
+                  <VmrDatabaseStatusProvider value={vmrDatabaseState}>
+                    <AppContext.Provider value={{ service, isApp: true }}>
+                      {Standalone_localMode && (vmrDatabaseState.account == null || !hasDatabaseLoaded) ? (
+                        <VmrAuthScreen />
+                      ) : (
+                        <NavigationContainer
+                          ref={navigationRef}
+                          onReady={() => setIsNavReady(true)}
+                          onStateChange={onNavigationStateChange}
+                          documentTitle={{ enabled: false }}
+                          theme={{ ...DefaultTheme, colors: { ...DefaultTheme.colors, background: "transparent" } }}
+                        >
+                          <AppNavigator initialScreen={initialScreen} />
+                        </NavigationContainer>
+                      )}
+                    </AppContext.Provider>
+                  </VmrDatabaseStatusProvider>
                 </ActiveSheetHeightProvider>
               </ModalStateProvider>
             </ClickTrackingContext.Provider>
@@ -479,3 +538,5 @@ export function AppView(props: IProps): JSX.Element | null {
     </GestureHandlerRootView>
   );
 }
+
+

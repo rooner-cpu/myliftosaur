@@ -25,3 +25,4 @@ export function MuscleImage(props: IMuscleImageProps): JSX.Element {
     </svg>
   );
 }
+

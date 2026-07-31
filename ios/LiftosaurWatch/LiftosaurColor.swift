@@ -25,9 +25,9 @@ enum LiftosaurColor {
 
     // MARK: - Base Colors (from tailwind.colors.json)
 
-    static let purple500 = hex("#8356F6")
-    static let purple400 = hex("#A48BFA")
-    static let purple300 = hex("#CCC1F9")
+    static let purple500 = hex("#3078C8")
+    static let purple400 = hex("#5599DF")
+    static let purple300 = hex("#82B5F0")
 
     static let darkgray950 = hex("#0C0819")
     static let darkgray900 = hex("#252034")

@@ -659,3 +659,4 @@ function WorkoutThumbnailsStripInner(props: IWorkoutThumbnailsStripProps): JSX.E
 }
 
 const WorkoutThumbnailsStrip = memo(WorkoutThumbnailsStripInner);
+

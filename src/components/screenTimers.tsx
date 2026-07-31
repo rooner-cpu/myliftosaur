@@ -73,3 +73,4 @@ export function ScreenTimers(props: IProps): JSX.Element {
     </View>
   );
 }
+

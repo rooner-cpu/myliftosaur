@@ -68,3 +68,4 @@ export function NavModalWeekStats(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

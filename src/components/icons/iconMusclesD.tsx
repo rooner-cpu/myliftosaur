@@ -24,3 +24,4 @@ export function IconMusclesD(props: IIconMusclesDProps): JSX.Element {
     </Svg>
   );
 }
+

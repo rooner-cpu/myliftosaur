@@ -175,3 +175,4 @@ export function EditProgramExerciseSetVariation(props: IEditProgramExerciseSetVa
     </View>
   );
 }
+

@@ -86,3 +86,4 @@ export function ExercisePickerOptionsMuscles(props: IProps): JSX.Element {
     </>
   );
 }
+

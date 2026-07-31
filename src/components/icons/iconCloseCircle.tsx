@@ -19,3 +19,4 @@ export function IconCloseCircle(props: IProps = {}): JSX.Element {
     </Svg>
   );
 }
+

@@ -348,3 +348,4 @@ export function NavModalEditProgramExercisePicker(): JSX.Element {
     </SheetScreenContainer>
   );
 }
+

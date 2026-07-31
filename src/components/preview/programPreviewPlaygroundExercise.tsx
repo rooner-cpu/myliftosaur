@@ -329,3 +329,4 @@ function PlaygroundExerciseTopBar(props: IPlaygroundExerciseTopBarProps): JSX.El
     </View>
   );
 }
+

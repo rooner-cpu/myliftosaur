@@ -57,7 +57,7 @@ function LoggedOutGuideBanner(props: { userAgent?: string }): JSX.Element {
       <div className="flex-1">
         To use this program:
         <ul className="pl-4 list-disc">
-          <li>Install Liftosaur app</li>
+          <li>Install VMR-Lift app</li>
           <li>
             Copy the link to this program by clicking on <IconLink className="inline-block" size={16} /> below
           </li>
@@ -118,3 +118,5 @@ function LoggedOutGuideBanner(props: { userAgent?: string }): JSX.Element {
     </>
   );
 }
+
+

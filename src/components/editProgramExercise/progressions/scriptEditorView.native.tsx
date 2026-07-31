@@ -35,3 +35,4 @@ export function ScriptEditorView(props: IProps): React.JSX.Element {
     />
   );
 }
+

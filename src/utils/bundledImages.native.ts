@@ -3,6 +3,7 @@ import { HostConfig_resolveUrl } from "./hostConfig";
 import { bundledSvg } from "./bundledImagesSvg";
 
 const bundledRaster: Record<string, ImageSourcePropType> = {
+  "/images/vmr-lift-logo.webp": require("../../assets/bundledImages/vmr-lift-logo.webp"),
   "/images/slide-1-bg.jpg": require("../../assets/bundledImages/slide-1-bg.jpg"),
   "/images/slide-2-image.png": require("../../assets/bundledImages/slide-2-image.png"),
   "/images/slide-3-image.png": require("../../assets/bundledImages/slide-3-image.png"),

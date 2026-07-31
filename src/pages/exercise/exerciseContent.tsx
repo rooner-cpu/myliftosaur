@@ -41,7 +41,7 @@ export interface IExerciseContentProps {
 }
 
 export function buildExerciseUrl(exerciseType: IExerciseType, filterTypes: string[]): string {
-  const url = UrlUtils_build(`/exercises/${Exercise_toUrlSlug(exerciseType)}`, "https://www.liftosaur.com");
+  const url = UrlUtils_build(`/exercises/${Exercise_toUrlSlug(exerciseType)}`, "http://myliftosaur.local:8081");
   const filterTypesParam = filterTypes.join(",");
   if (filterTypesParam) {
     url.searchParams.set("filtertypes", filterTypes.join(",").toLowerCase());
@@ -616,3 +616,4 @@ function YoutubePlayer(props: { video?: string }): JSX.Element {
 
   return <div id="exercise-youtube-player" className="w-full h-full" />;
 }
+

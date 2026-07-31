@@ -34,3 +34,4 @@ export function ScreenMusclesDay(props: IProps): JSX.Element {
     />
   );
 }
+

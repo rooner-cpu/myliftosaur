@@ -183,3 +183,4 @@ export function CustomProgressSettings(props: ICustomProgressSettingsProps): JSX
     </View>
   );
 }
+

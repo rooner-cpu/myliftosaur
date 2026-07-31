@@ -26,3 +26,4 @@ export function IconWatch(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

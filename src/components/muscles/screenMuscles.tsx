@@ -21,3 +21,4 @@ export function ScreenMuscles(props: IProps): JSX.Element {
 
   return <MusclesView title={props.title} points={props.points} settings={props.settings} />;
 }
+

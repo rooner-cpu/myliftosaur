@@ -14,8 +14,8 @@ interface IProps {
 
 export function UserDashboardHtml(props: IProps): JSX.Element {
   const { client, ...data } = props;
-  const url = "https://www.liftosaur.com/dashboard/user";
-  const title = `User Dashboard | Liftosaur`;
+  const url = "http://myliftosaur.local:8081/dashboard/user";
+  const title = `User Dashboard | VMR-Lift`;
 
   return (
     <Page
@@ -34,3 +34,4 @@ export function UserDashboardHtml(props: IProps): JSX.Element {
     </Page>
   );
 }
+

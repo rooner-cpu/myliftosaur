@@ -80,3 +80,4 @@ Overhead Press / 4x10 / warmup: 1x5 50%
 Bicep Curl / 3x10 / warmup: none
 Crunch / 3x1+ / 60s / warmup: none
 ```
+

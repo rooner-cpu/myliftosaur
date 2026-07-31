@@ -210,3 +210,4 @@ function ScreenWorkoutInner(props: IScreenWorkoutProps): JSX.Element | null {
 }
 
 export const ScreenWorkout = memo(ScreenWorkoutInner);
+

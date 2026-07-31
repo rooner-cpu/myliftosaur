@@ -26,3 +26,4 @@ export function IconGooglePlay(props: IProps): JSX.Element {
     </svg>
   );
 }
+

@@ -41,7 +41,7 @@ export function WorkoutShareOutput(props: IWorkoutShareOutputProps): JSX.Element
       <View className="flex-row items-end">
         <View className="flex-row items-start gap-2 mx-2">
           <Image source={{ uri: HostConfig_resolveUrl("/images/icon512.png") }} className="w-6 h-6 rounded-md" />
-          <Text className="text-lg font-bold text-white">Liftosaur</Text>
+          <Text className="text-lg font-bold text-white">VMR-Lift</Text>
         </View>
         {numberOfRecordPrs > 0 && (
           <View className="pr-2 ml-auto items-end">
@@ -103,3 +103,5 @@ function Property(props: { name: string; value: string | number; unit?: string }
     </View>
   );
 }
+
+

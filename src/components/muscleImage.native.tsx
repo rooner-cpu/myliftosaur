@@ -27,3 +27,4 @@ export function MuscleImage(props: IMuscleImageProps): JSX.Element | null {
   const height = Math.round((props.size / 61) * 48);
   return <SvgXml xml={resolveCssVars(xml)} width={width} height={height} />;
 }
+

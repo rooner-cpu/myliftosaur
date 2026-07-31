@@ -551,3 +551,4 @@ function buildCollapsedGroup(group: [string, number][][]): [string, string][] {
   const range = firstVal === lastVal ? `${firstVal}` : `${firstVal}-${lastVal}`;
   return [...prefix, [lastKey, range]];
 }
+

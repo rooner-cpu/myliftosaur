@@ -23,3 +23,4 @@ export function IconEquipmentCable(props: IIconEquipmentCableProps): JSX.Element
     </Svg>
   );
 }
+

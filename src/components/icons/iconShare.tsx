@@ -21,3 +21,4 @@ export function IconShare(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

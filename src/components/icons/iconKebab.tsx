@@ -17,3 +17,4 @@ export function IconKebab(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

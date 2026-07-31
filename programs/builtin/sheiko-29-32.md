@@ -563,3 +563,4 @@ Hanging Leg Raise / 2x8 0lb / warmup: none
 Squat / 1x3 50%, 2x3 60%, 3x2 70% / warmup: none
 Bench Press / 1x3 50%, 2x3 60%, 3x2 70% / warmup: none
 ```
+

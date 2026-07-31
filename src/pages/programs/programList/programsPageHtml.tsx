@@ -13,8 +13,8 @@ interface IProps {
 export function ProgramsPageHtml(props: IProps): JSX.Element {
   const { client, account, ...data } = props;
   const count = props.programs.length;
-  const title = `${count}+ Free Weightlifting Programs & Workout Plans | Liftosaur`;
-  const url = "https://www.liftosaur.com/programs";
+  const title = `${count}+ Free Weightlifting Programs & Workout Plans | VMR-Lift`;
+  const url = "http://myliftosaur.local:8081/programs";
   const description = `Browse ${count}+ free weightlifting programs including GZCLP, 5/3/1, nSuns, PPL, and more. Filter by experience level, frequency, and goals. Run any program with automatic progressive overload tracking.`;
 
   const jsonLd: IJsonLd[] = [
@@ -23,12 +23,12 @@ export function ProgramsPageHtml(props: IProps): JSX.Element {
       name: "Weightlifting Programs",
       items: props.programs.map((p) => ({
         name: p.name,
-        url: `https://www.liftosaur.com/programs/${p.id}`,
+        url: `http://myliftosaur.local:8081/programs/${p.id}`,
       })),
     },
     {
       type: "BreadcrumbList",
-      items: [{ name: "Home", url: "https://www.liftosaur.com" }, { name: "Programs" }],
+      items: [{ name: "Home", url: "http://myliftosaur.local:8081" }, { name: "Programs" }],
     },
   ];
 
@@ -52,3 +52,4 @@ export function ProgramsPageHtml(props: IProps): JSX.Element {
     </Page>
   );
 }
+

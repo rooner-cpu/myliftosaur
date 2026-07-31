@@ -56,3 +56,4 @@ export function IconDoc(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

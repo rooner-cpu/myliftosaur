@@ -63,3 +63,4 @@ export function ScreenAppleHealthSettings(props: IProps): JSX.Element {
     </View>
   );
 }
+

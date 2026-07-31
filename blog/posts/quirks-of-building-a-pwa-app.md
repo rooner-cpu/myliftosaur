@@ -1,7 +1,7 @@
 ---
 date: "2021-02-05"
 title: Quirks of building a PWA app
-og_title: Quirks of building a PWA app | Liftosaur blog
+og_title: Quirks of building a PWA app | VMR-Lift blog
 og_description: "Main pain points of building a PWA app, and how I worked around them"
 og_image: /images/quirks-of-building-a-pwa-app-pwa.png
 tags: ["tech"]
@@ -23,7 +23,7 @@ And here I am, nine months later, with a working PWA app, which is already prett
 
 ## What the heck is PWA?
 
-[Liftosaur](https://www.liftosaur.com/about) is a PWA. What that really means is that it has a [manifest file](https://www.liftosaur.com/manifest.webmanifest) and [a script](https://www.liftosaur.com/webpushr-sw.js), that runs as a Service Worker - special JavaScript code, that is run by a browser separately from a web page, in a background. We add a link to our manifest file in `index.html` like this:
+[VMR-Lift](http://myliftosaur.local:8081/about) is a PWA. What that really means is that it has a [manifest file](http://myliftosaur.local:8081/manifest.webmanifest) and [a script](http://myliftosaur.local:8081/webpushr-sw.js), that runs as a Service Worker - special JavaScript code, that is run by a browser separately from a web page, in a background. We add a link to our manifest file in `index.html` like this:
 
 ```html
 <link rel="manifest" href="/manifest.webmanifest" />
@@ -52,7 +52,7 @@ And that's mostly it! After that, you can add that web page to your phone home s
     <div class="highlight-block-sum">This is what it looks like on the home screen (last icon)</div>
   </div>
   <div class="highlight-img-flex">
-    <img src="../../images/quirks-of-building-a-pwa-app-liftosaur.jpg" width="100%" alt="Liftosaur Screen on iOS" />
+    <img src="../../images/quirks-of-building-a-pwa-app-liftosaur.jpg" width="100%" alt="VMR-Lift Screen on iOS" />
     <div class="highlight-block-sum">This is what PWA app looks like on iOS</div>
   </div>
 </div>
@@ -75,11 +75,11 @@ There's a feature in the app - after you've finished a set, you press a button, 
 
 When the timer mentioned above hits a threshold, it plays a sound, so you know - it's time to start another set. I couldn't figure out how to do that on iOS. Safari on iOS only allows you to play a sound in e.g. an event click handler. If you try to play it on some random event happening (like for me, it was a Redux action triggering it), Safari complains about audio autoplay being forbidden. There're some solutions on the Internet/Stack Overflow, but none of them works. Apparently, if a user is done with the set and hits a button, you can start `setTimeout` and try to play the audio inside that `setTimeout`. It works, but only for small enough timeouts (like several seconds). Anything over a minute - and you get that audio autoplay forbidden error again.
 
-I couldn't figure out that too for iOS. Liftosaur on iOS doesn't send push notifications when timers hit a threshold, and also it doesn't make a sound when it happens :(
+I couldn't figure out that too for iOS. VMR-Lift on iOS doesn't send push notifications when timers hit a threshold, and also it doesn't make a sound when it happens :(
 
 ### iOS could be pretty aggressive unloading from memory the opened PWA apps that are added to the home screen
 
-Imagine you just finished a set, and you switch to Twitter to read some stuff there while resting. A couple of minutes later, you switch back to Liftosaur - and iOS already unloaded it from memory, so Liftosaur loads again. So you need to make sure your app launches fast, and also you store as much internal state as possible in IndexedDB. Otherwise, users may have a horrible experience losing all their progress.
+Imagine you just finished a set, and you switch to Twitter to read some stuff there while resting. A couple of minutes later, you switch back to VMR-Lift - and iOS already unloaded it from memory, so VMR-Lift loads again. So you need to make sure your app launches fast, and also you store as much internal state as possible in IndexedDB. Otherwise, users may have a horrible experience losing all their progress.
 
 To be fair, it got better after iOS 13, and it's not as aggressive with unloading PWAs from memory anymore, but it still happens sometimes.
 
@@ -101,7 +101,7 @@ If you add a PWA app to your home screen, whatever the app icon was, it will be 
 
 <div class="highlight-block highlight-block-flex" style="padding-left: 3rem; padding-right: 3rem">
   <div class="highlight-img-flex">
-    <img src="../../images/quirks-of-building-a-pwa-app-ios-share.png" width="100%" alt="Liftosaur Screen with share icon" />
+    <img src="../../images/quirks-of-building-a-pwa-app-ios-share.png" width="100%" alt="VMR-Lift Screen with share icon" />
     <div class="highlight-block-sum">To add to home screen on iOS, you need to Share (!) first</div>
   </div>
   <div class="highlight-img-flex">
@@ -121,7 +121,7 @@ In my opinion, this is the worst pain point of PWA. Technology-wise, and especia
 Here's a bright side, though - Google Play allows you to publish your PWAs right in the store. It's called [TWA (Trusted Web Activity)](https://developers.google.com/web/android/trusted-web-activity), and that makes the PWA installation process look exactly like a native app - you can find it in the Play Store, click Install, and it will get installed, just like a regular app. Obviously - nothing like that exists on iOS.
 
 <div class="highlight-block">
-  <img src="../../images/quirks-of-building-a-pwa-app-google-play.png" width="100%" alt="Liftosaur in Google Play" />
+  <img src="../../images/quirks-of-building-a-pwa-app-google-play.png" width="100%" alt="VMR-Lift in Google Play" />
   <div class="highlight-block-sum">PWA in Google Play Store</div>
 </div
 
@@ -130,3 +130,4 @@ To build TWA, you'll need to ensure you get maximum PWA points in Lighthouse, an
 ## Conclusion
 
 You definitely can build quality PWAs. You usually won't have any problems on Android, and you'll need to jump through some hoops for iOS. Some things are impossible to do on iOS at all. And be prepared that users don't know anything about PWAs, so you'd need to educate them about it somehow - that means your marketing will be harder.
+

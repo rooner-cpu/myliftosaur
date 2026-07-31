@@ -24,3 +24,4 @@ export function IconTracker(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

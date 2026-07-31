@@ -194,3 +194,4 @@ function UnitSwitcher(props: { currentUnit: IUnit; onUnitChange: (newUnit: IUnit
     </label>
   );
 }
+

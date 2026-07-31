@@ -171,3 +171,4 @@ export function TrackProgress(): JSX.Element {
     </div>
   );
 }
+

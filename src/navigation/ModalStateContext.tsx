@@ -200,3 +200,4 @@ export function useModal<K extends keyof IModalDataMap & keyof IModalResultMap>(
     [dispatch, key]
   );
 }
+

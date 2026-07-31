@@ -468,3 +468,4 @@ function InputNumber2Inner(props: IInputNumber2Props): JSX.Element {
 }
 
 export const InputNumber2 = memo(InputNumber2Inner);
+

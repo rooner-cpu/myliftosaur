@@ -230,3 +230,4 @@ function DraggableItem<T>(props: IDraggableItemProps<T>): JSX.Element {
     </Animated.View>
   );
 }
+

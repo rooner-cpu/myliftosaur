@@ -1,22 +1,22 @@
 ---
 id: api
 title: "REST API"
-shortDescription: "Access your programs and workout history programmatically with the Liftosaur REST API."
+shortDescription: "Access your programs and workout history programmatically with the VMR-Lift REST API."
 order: 1
 category: "Integrations"
 datePublished: "2026-03-07"
 dateModified: "2026-03-07"
 ---
 
-## What is the Liftosaur API?
+## What is the VMR-Lift API?
 
-Liftosaur has a REST API that lets you manage your programs and workout history programmatically. You can create programs, log workouts, simulate progressions, and pull stats - all from scripts, apps, or anything that can make HTTP requests.
+VMR-Lift has a REST API that lets you manage your programs and workout history programmatically. You can create programs, log workouts, simulate progressions, and pull stats - all from scripts, apps, or anything that can make HTTP requests.
 
 Requires a premium subscription.
 
 ## Getting an API Key
 
-1. Open Liftosaur and go to **Settings**
+1. Open VMR-Lift and go to **Settings**
 2. Tap **API Keys**
 3. Tap **Create API Key** and give it a name
 4. Copy the key - it starts with `lftsk_`
@@ -36,7 +36,7 @@ Every request needs this header. Without it you'll get a `401` error.
 ## Base URL
 
 ```
-https://www.liftosaur.com/api/v1
+http://myliftosaur.local:8081/api/v1
 ```
 
 ## Endpoints
@@ -534,7 +534,7 @@ GET /api/v1/gyms/:gymId/equipment/:id
 
 ### Update Equipment
 
-Equipment configuration drives how Liftosaur rounds prescribed weights during a workout. Only provided fields change; omitted fields keep their current values. Weights are strings like `"45lb"` or `"20kg"`. Out-of-range values are clamped.
+Equipment configuration drives how VMR-Lift rounds prescribed weights during a workout. Only provided fields change; omitted fields keep their current values. Weights are strings like `"45lb"` or `"20kg"`. Out-of-range values are clamped.
 
 ```
 PUT /api/v1/gyms/:gymId/equipment/:id
@@ -828,3 +828,4 @@ Common status codes:
 - `400` - invalid input (wrong program name, can't delete active program, etc.)
 - `404` - record or program not found
 - `422` - parse error (invalid Liftoscript or Liftoscript Workouts syntax)
+

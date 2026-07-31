@@ -270,3 +270,4 @@ export function ScreenEditProgramExercise(props: IProps): JSX.Element {
     </>
   );
 }
+

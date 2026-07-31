@@ -156,3 +156,4 @@ function PreviewListOfExercises(props: IPreviewListOfExercisesProps): JSX.Elemen
     </Scroller>
   );
 }
+

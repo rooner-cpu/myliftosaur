@@ -14,3 +14,4 @@ export function IconApple(props: { color?: string; size?: number }): JSX.Element
     </Svg>
   );
 }
+

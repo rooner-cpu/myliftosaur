@@ -38,3 +38,4 @@ export function PlannerDayStats(props: IPlannerDayStatsProps): JSX.Element {
     </View>
   );
 }
+

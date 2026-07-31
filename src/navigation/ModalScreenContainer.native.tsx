@@ -15,3 +15,4 @@ interface IProps {
 export function ModalScreenContainer(props: IProps): JSX.Element {
   return <>{props.children}</>;
 }
+

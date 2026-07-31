@@ -15,7 +15,7 @@ export function ModalImportFromLinkContent(props: { onSubmit: (value?: string) =
       <Input
         required={true}
         requiredMessage="Please paste a link"
-        placeholder="https://www.liftosaur.com/..."
+        placeholder="http://myliftosaur.local:8081/..."
         autoCapitalize="none"
         autoCorrect={false}
         changeType="oninput"
@@ -43,3 +43,4 @@ export function ModalImportFromLinkContent(props: { onSubmit: (value?: string) =
     </View>
   );
 }
+

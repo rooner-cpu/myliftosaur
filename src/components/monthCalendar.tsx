@@ -216,3 +216,4 @@ const MonthItem = memo(function MonthItem(props: IMonthItemProps): JSX.Element {
     </View>
   );
 });
+

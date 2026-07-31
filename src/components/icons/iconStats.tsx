@@ -18,3 +18,4 @@ export function IconStats(props: IProps): JSX.Element {
     </svg>
   );
 }
+

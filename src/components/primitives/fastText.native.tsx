@@ -56,3 +56,4 @@ export function FastText(props: IFastTextProps): JSX.Element {
     />
   );
 }
+

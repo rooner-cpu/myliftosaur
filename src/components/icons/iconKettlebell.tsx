@@ -23,3 +23,4 @@ export function IconKettlebell(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

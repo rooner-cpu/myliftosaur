@@ -117,3 +117,4 @@ function KeyboardSpacer(): JSX.Element {
   }
   return <Animated.View style={{ height: animatedHeight }} />;
 }
+

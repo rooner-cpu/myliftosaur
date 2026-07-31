@@ -22,3 +22,4 @@ export function IconSwapSmall(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

@@ -206,3 +206,4 @@ Seated Leg Curl / 3x12 / 60lb / 60s / warmup: none / progress: dp(5lb, 12, 15)
 Hip Abductor / 3x12 / 60lb / 60s / warmup: none / progress: dp(5lb, 12, 15)
 Seated Calf Raise, Leverage Machine / 3x12 / 90lb / 60s / warmup: none / progress: dp(5lb, 12, 20)
 ```
+

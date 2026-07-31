@@ -163,3 +163,4 @@ function Footer(props: IFooterProps): JSX.Element {
     </View>
   );
 }
+

@@ -28,3 +28,4 @@ export function IconGraphs(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

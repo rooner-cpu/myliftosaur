@@ -30,3 +30,4 @@ export function IconMuscleSettings(props: IProps): JSX.Element {
     </svg>
   );
 }
+

@@ -187,3 +187,4 @@ Lat Pulldown / 3x8 / 80lb / 60s / progress: dp(5lb, 8, 12) / warmup: none
 Cable Crunch / 2x15 / 30lb / 60s / superset: A / warmup: none / progress: dp(5lb, 15, 25)
 Bicep Curl / 2x10 / 20lb / 60s / superset: A / warmup: none / progress: dp(5lb, 10, 15)
 ```
+

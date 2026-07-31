@@ -128,3 +128,4 @@ function buildDispatch(originalDispatch: IDispatch): ILensDispatch<IState> {
     });
   };
 }
+

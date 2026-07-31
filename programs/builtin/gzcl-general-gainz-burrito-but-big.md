@@ -2,7 +2,7 @@
 id: gzcl-general-gainz-burrito-but-big
 name: "GZCL: General Gainz - Burrito But Big"
 author: /u/benjaminbk
-url: "https://www.liftosaur.com/programs/gzcl-general-gainz-burrito-but-big"
+url: "http://myliftosaur.local:8081/programs/gzcl-general-gainz-burrito-but-big"
 shortDescription: Hypertrophy adaptation of General Gainz, as a 12-week program.
 isMultiweek: true
 tags: []
@@ -44,7 +44,7 @@ I highly recommend to read [the Reddit post](https://www.reddit.com/r/gzcl/comme
 
 Check the interactive playground below to see how the program works, and what the weights/sets/reps look like for each week. You can edit the 2RM, 5RM, etc weights for each exercise, and see how the weight changes.
 
-You can run GZCL: General Gainz - Burrito But Big program in the Liftosaur app. You only would need to set initial RM weights for each exercise, and the app will automatically calculate the weights, change the sets, autobalance the T3 weights, and do all the math for you.
+You can run GZCL: General Gainz - Burrito But Big program in the VMR-Lift app. You only would need to set initial RM weights for each exercise, and the app will automatically calculate the weights, change the sets, autobalance the T3 weights, and do all the math for you.
 
 <!-- faq -->
 
@@ -403,3 +403,4 @@ t2_anchor / 1x5 80%+ / 180s
 
 ## Day 4
 ```
+

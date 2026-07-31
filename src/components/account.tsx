@@ -232,3 +232,4 @@ function AccountLoggedOutView(props: IAccountLoggedOutViewProps): JSX.Element {
     </View>
   );
 }
+

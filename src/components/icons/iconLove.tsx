@@ -28,3 +28,4 @@ export function IconLove(props: IProps): JSX.Element {
     </svg>
   );
 }
+

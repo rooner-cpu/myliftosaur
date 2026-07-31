@@ -142,3 +142,4 @@ function Progression(props: IProgressionProps): JSX.Element {
     }
   }
 }
+

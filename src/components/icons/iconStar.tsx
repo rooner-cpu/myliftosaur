@@ -25,3 +25,4 @@ export function IconStar(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

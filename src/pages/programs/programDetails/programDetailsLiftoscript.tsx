@@ -18,3 +18,4 @@ export function ProgramDetailsLiftoscript(props: IProps): JSX.Element {
     </div>
   );
 }
+

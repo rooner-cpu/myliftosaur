@@ -82,3 +82,4 @@ export function NavModalTextInput(): JSX.Element {
     </ModalScreenContainer>
   );
 }
+

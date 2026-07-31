@@ -20,3 +20,4 @@ export function IconFire(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

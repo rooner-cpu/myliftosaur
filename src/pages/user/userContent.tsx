@@ -101,3 +101,4 @@ function Entry(props: IEntryProps): JSX.Element {
     </section>
   );
 }
+

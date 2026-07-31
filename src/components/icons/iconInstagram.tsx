@@ -68,3 +68,4 @@ export function IconInstagram(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

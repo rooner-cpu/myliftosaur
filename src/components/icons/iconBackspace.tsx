@@ -22,3 +22,4 @@ export function IconBackspace(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

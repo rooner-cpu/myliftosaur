@@ -41,3 +41,4 @@ export function HistoryRecordsList(props: IHistoryRecordsListProps): JSX.Element
     </Fragment>
   );
 }
+

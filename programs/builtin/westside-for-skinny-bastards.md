@@ -274,3 +274,4 @@ Squat[1,5-6] / 1x3-5 / 185lb / 180s / progress: custom(increment: 10lb) { ...aut
 ## Repetition Upper Body
 ## Max-Effort Lower Body
 ```
+

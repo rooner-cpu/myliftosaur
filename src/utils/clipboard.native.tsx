@@ -12,3 +12,4 @@ export async function ClipboardUtils_copy(text: string): Promise<void> {
 export async function ClipboardUtils_canReadTextFromClipboard(): Promise<boolean> {
   return Clipboard.hasString();
 }
+

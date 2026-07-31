@@ -102,3 +102,4 @@ export function TransparentModal(props: IProps): JSX.Element {
     </SheetPanContext.Provider>
   );
 }
+

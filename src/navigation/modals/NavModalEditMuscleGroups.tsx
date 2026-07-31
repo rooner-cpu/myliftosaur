@@ -92,3 +92,4 @@ export function NavModalEditMuscleGroups(): JSX.Element {
     </SheetScreenContainer>
   );
 }
+

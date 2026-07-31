@@ -74,3 +74,4 @@ export function ScreenMuscleGroups(props: IProps): JSX.Element {
     </View>
   );
 }
+

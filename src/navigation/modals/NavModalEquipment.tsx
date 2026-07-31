@@ -115,3 +115,4 @@ export function NavModalEquipment(): JSX.Element {
   }
   return <NavModalEquipmentWorkout progressId={params.progressId} />;
 }
+

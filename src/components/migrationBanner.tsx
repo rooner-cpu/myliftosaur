@@ -18,3 +18,4 @@ export function MigrationBanner(_props: IMigrationBannerProps): JSX.Element {
     </View>
   );
 }
+

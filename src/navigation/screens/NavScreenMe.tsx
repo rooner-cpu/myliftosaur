@@ -288,3 +288,4 @@ export function NavScreenImportPreview(): JSX.Element {
     </View>
   );
 }
+

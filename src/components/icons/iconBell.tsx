@@ -24,3 +24,4 @@ export function IconBell(props: IProps): JSX.Element {
     </Svg>
   );
 }
+

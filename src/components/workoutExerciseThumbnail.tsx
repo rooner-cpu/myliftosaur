@@ -121,3 +121,4 @@ function SetsProgressBadge(props: { completed: number; total: number }): JSX.Ele
 }
 
 export const WorkoutExerciseThumbnail = memo(WorkoutExerciseThumbnailInner);
+

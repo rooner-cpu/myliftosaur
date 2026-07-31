@@ -1,4 +1,5 @@
-import { IThunk, IDispatch } from "./types";
+import { IThunk, IDispatch } from "./types";
+import { Standalone_localMode } from "../config/standalone";
 import type { NavigationAction } from "@react-navigation/native";
 import { IScreen, IScreenData, IScreenParams } from "../models/screen";
 import type { INavigateOpts } from "../navigation/navigationService";
@@ -1137,6 +1138,7 @@ export function Thunk_maybeRequestSignup(): IThunk {
       const signupRequests = state.storage.signupRequests;
       const lastsignupRequest = signupRequests[signupRequests.length - 1];
       if (
+        !Standalone_localMode &&
         state.user?.id == null &&
         history.length > 8 &&
         signupRequests.length < 3 &&
@@ -1357,7 +1359,7 @@ export function Thunk_exportHistoryToCSV(): IThunk {
     dispatch(Thunk_postevent("export-history-to-csv"));
     const state = getState();
     const csv = CSV_toString(History_exportAsCSV(state.storage.history, state.storage.settings));
-    Exporter_toFile(`liftosaur_${DateUtils_formatYYYYMMDD(Date.now())}.csv`, csv);
+    Exporter_toFile(`vmr-lift_${DateUtils_formatYYYYMMDD(Date.now())}.csv`, csv);
   };
 }
 
@@ -1373,7 +1375,7 @@ export function Thunk_exportProgramsToText(): IThunk {
       text += PlannerProgram_generateFullText(program.planner.weeks);
       text += `\n\n\n`;
     }
-    Exporter_toFile(`liftosaur_all_programs_${DateUtils_formatYYYYMMDD(Date.now())}.txt`, text);
+    Exporter_toFile(`vmr-lift_all_programs_${DateUtils_formatYYYYMMDD(Date.now())}.txt`, text);
   };
 }
 
@@ -2539,3 +2541,5 @@ export function Thunk_openManageSubscriptions(): IThunk {
     }
   };
 }
+
+

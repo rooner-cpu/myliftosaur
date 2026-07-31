@@ -49,3 +49,4 @@ export function ModalNewEquipmentContent(props: IProps): JSX.Element {
     </View>
   );
 }
+
