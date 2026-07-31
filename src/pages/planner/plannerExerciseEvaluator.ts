@@ -1,6 +1,6 @@
 // import util from "util";
 import { SyntaxNode } from "@lezer/common";
-import { Exercise_findByNameAndEquipment } from "../../models/exercise";
+import { Exercise_findByNameAndEquipment, Exercise_buildName } from "../../models/exercise";
 import { CollectionUtils_compact } from "../../utils/collection";
 import { parser as plannerExerciseParser } from "./plannerExerciseParser";
 import { IEither } from "../../utils/types";
@@ -9,6 +9,7 @@ import {
   IPlannerProgramExerciseRepRange,
   IPlannerProgramExerciseSet,
   IPlannerProgramExerciseSetVariation,
+  IPlannerProgramExerciseVariation,
   IPlannerProgramProperty,
   IPlannerProgramReuse,
   IPlannerProgramExerciseWarmupSet,
@@ -34,7 +35,7 @@ import { Progress_createEmptyScriptBindings, Progress_createScriptFunctions } fr
 import { LiftoscriptSyntaxError, LiftoscriptEvaluator } from "../../liftoscriptEvaluator";
 import { Weight_print, Weight_smartConvert } from "../../models/weight";
 import { PlannerStateVars_fromArgs } from "./models/plannerStateVars";
-import { PlannerKey_fromFullName } from "./plannerKey";
+import { PlannerKey_fromFullName, PlannerKey_fromExerciseVariations } from "./plannerKey";
 import { UidFactory_generateUid } from "../../utils/generator";
 import { ObjectUtils_pick, ObjectUtils_isEqual } from "../../utils/object";
 import {
@@ -53,6 +54,7 @@ export interface IPlannerTopLineItem {
   fullName?: string;
   repeat?: number[];
   repeatRanges?: string[];
+  isRepeat?: boolean;
   descriptions?: string[];
   sections?: string;
   sectionsToReuse?: string;
@@ -313,6 +315,8 @@ export class PlannerExerciseEvaluator {
       const repRange = this.getRepRange(setParts);
       const rpeNode = expr.getChild(PlannerNodeName.Rpe);
       const timerNode = expr.getChild(PlannerNodeName.Timer);
+      const setTimerNode = expr.getChild(PlannerNodeName.SetTimer);
+      const autoNode = expr.getChild(PlannerNodeName.Auto);
       const percentageNode = expr.getChild(PlannerNodeName.PercentageWithPlus);
       const weightNode = expr.getChild(PlannerNodeName.WeightWithPlus);
       const labelNode = expr.getChild(PlannerNodeName.SetLabel);
@@ -326,7 +330,18 @@ export class PlannerExerciseEvaluator {
       if (rpe != null && isNaN(rpe)) {
         rpe = undefined;
       }
-      const timer = timerNode == null ? undefined : parseInt(this.getValue(timerNode).replace("s", ""), 10);
+      let timer = timerNode == null ? undefined : parseInt(this.getValue(timerNode).replace("s", ""), 10);
+      let setTimer: number | undefined;
+      let isOverflowSetTimer: boolean | undefined;
+      if (setTimerNode != null) {
+        // SetTimer encodes both the active timer and the rest timer, e.g. "60s+|30s" or "60s|?"
+        const [leftRaw, rightRaw] = this.getValue(setTimerNode).split("|");
+        isOverflowSetTimer = leftRaw.indexOf("+") !== -1 ? true : undefined;
+        setTimer = parseInt(leftRaw.replace("s", "").replace("+", ""), 10);
+        // "?" on the rest side means "fall back to the global default rest timer"
+        timer = rightRaw === "?" ? undefined : parseInt(rightRaw.replace("s", ""), 10);
+      }
+      const auto = autoNode != null ? true : undefined;
       const percentage =
         percentageNode == null ? undefined : parseFloat(this.getValue(percentageNode).replace(/[%\+]/, ""));
       const weight = this.getWeight(weightNode);
@@ -341,6 +356,9 @@ export class PlannerExerciseEvaluator {
       return {
         repRange,
         timer,
+        setTimer,
+        isOverflowSetTimer,
+        auto,
         logRpe,
         rpe,
         weight,
@@ -915,17 +933,44 @@ export class PlannerExerciseEvaluator {
       } else if (this.weeks.length === 0) {
         this.weeks.push({ name: "Week 1", line: 1, days: [{ name: "Day 1", line: 1, exercises: [] }] });
       }
-      const nameNode = expr.getChild(PlannerNodeName.ExerciseName);
-      if (nameNode == null) {
-        assert("ExerciseName");
+      const variationsNode = expr.getChild(PlannerNodeName.ExerciseVariations);
+      if (variationsNode == null) {
+        assert(PlannerNodeName.ExerciseVariations);
       }
+      const nameNode = variationsNode;
 
-      const fullName = this.getValue(nameNode);
-      // eslint-disable-next-line prefer-const
-      let { label, name, equipment } = PlannerExerciseEvaluator.extractNameParts(fullName, this.settings.exercises);
-      const key = PlannerKey_fromFullName(fullName, this.settings.exercises);
-      const shortName = PlannerProgramExercise_shortNameFromFullName(fullName, this.settings);
-      const exercise = Exercise_findByNameAndEquipment(shortName, this.settings.exercises);
+      const fullName = this.getValue(variationsNode);
+      const variationNodes = variationsNode.getChildren(PlannerNodeName.ExerciseVariation);
+      const exerciseVariations: IPlannerProgramExerciseVariation[] = [];
+      let label: string | undefined;
+      for (let i = 0; i < variationNodes.length; i += 1) {
+        const variationNode = variationNodes[i];
+        const isCurrent = variationNode.getChild(PlannerNodeName.CurrentVariation) != null;
+        const variationNameNode = variationNode.getChild(PlannerNodeName.ExerciseName);
+        if (variationNameNode == null) {
+          assert(PlannerNodeName.ExerciseName);
+        }
+        const variationFullName = this.getValue(variationNameNode);
+        const parts = PlannerExerciseEvaluator.extractNameParts(variationFullName, this.settings.exercises);
+        if (i === 0) {
+          label = parts.label;
+        }
+        const variationShortName = PlannerProgramExercise_shortNameFromFullName(variationFullName, this.settings);
+        const variationExerciseType = Exercise_findByNameAndEquipment(variationShortName, this.settings.exercises);
+        exerciseVariations.push({
+          exerciseType: variationExerciseType,
+          name: parts.name,
+          isCurrent,
+        });
+      }
+      const currentVariationIndex = exerciseVariations.findIndex((v) => v.isCurrent);
+      const activeVariationIndex = currentVariationIndex === -1 ? 0 : currentVariationIndex;
+      const activeVariation = exerciseVariations[activeVariationIndex];
+      const name = activeVariation?.name ?? "";
+      const exercise = activeVariation?.exerciseType;
+      const equipment = exercise?.equipment;
+      const key = PlannerKey_fromExerciseVariations(exerciseVariations, label);
+      const shortName = Exercise_buildName(name, this.settings, undefined, equipment);
       let notused = this.getIsNotUsed(expr);
       const sectionNodes = expr.getChildren(PlannerNodeName.ExerciseSection);
       const setVariations: IPlannerProgramExerciseSetVariation[] = [];
@@ -967,6 +1012,11 @@ export class PlannerExerciseEvaluator {
       }
       const rpe = allSets.find((set) => set.repRange == null && set.rpe != null)?.rpe;
       const timer = allSets.find((set) => set.repRange == null && set.timer != null)?.timer;
+      const setTimer = allSets.find((set) => set.repRange == null && set.setTimer != null)?.setTimer;
+      const isOverflowSetTimer = allSets.find(
+        (set) => set.repRange == null && set.isOverflowSetTimer != null
+      )?.isOverflowSetTimer;
+      const auto = allSets.find((set) => set.repRange == null && set.auto != null)?.auto;
       const percentage = allSets.find((set) => set.repRange == null && set.percentage != null)?.percentage;
       const weight = allSets.find((set) => set.repRange == null && set.weight != null)?.weight;
       const logRpe = allSets.find((set) => set.repRange == null && set.logRpe != null)?.logRpe;
@@ -1055,6 +1105,7 @@ export class PlannerExerciseEvaluator {
         notused: notused,
         evaluatedSetVariations: [],
         setVariations,
+        exerciseVariations,
         descriptions: {
           values: descriptions,
         },
@@ -1067,6 +1118,9 @@ export class PlannerExerciseEvaluator {
           logRpe,
           askWeight,
           timer,
+          setTimer,
+          isOverflowSetTimer,
+          auto,
           percentage,
           weight,
         },
@@ -1217,7 +1271,7 @@ export class PlannerExerciseEvaluator {
     for (const child of children) {
       if (child.type.name === PlannerNodeName.ExerciseExpression) {
         ongoingDescriptions = false;
-        const nameNode = child.getChild(PlannerNodeName.ExerciseName)!;
+        const nameNode = child.getChild(PlannerNodeName.ExerciseVariations)!;
         const fullName = this.getValue(nameNode);
         const key = PlannerKey_fromFullName(fullName, this.settings.exercises);
         const repeat = this.getRepeat(child);

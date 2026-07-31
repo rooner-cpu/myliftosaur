@@ -20,13 +20,16 @@ import {
   Thunk_handleWatchStorageMerge,
   Thunk_reloadStorageFromDisk,
   Thunk_fetchInitial,
+  Thunk_debugTestLogin,
 } from "../ducks/thunks";
 import { Service } from "../api/service";
 import { IAudioInterface } from "../lib/audioInterface";
+import { Persistence } from "../utils/persistence";
 import { Progress_getCurrentProgress, Progress_lbProgress } from "../models/progress";
 import { IAttributionData, IEnv, IState, updateState } from "../models/state";
 import { Notification } from "./notification";
-import { WhatsNew_doesHaveNewUpdates } from "../models/whatsnew";
+import { Toast } from "./toast";
+import { useOnloadModals } from "../navigation/useOnloadModals";
 import {
   Subscriptions_cleanupOutdatedAppleReceipts,
   Subscriptions_cleanupOutdatedGooglePurchaseTokens,
@@ -40,6 +43,9 @@ import { AsyncQueue } from "../utils/asyncQueue";
 import { useLoopCatcher } from "../utils/useLoopCatcher";
 import RB from "rollbar";
 import { exceptionIgnores } from "../utils/rollbar";
+
+// typeof-guarded: Metro/webpack define __DEV__, but this module also runs under node (tests).
+declare let __DEV__: boolean | undefined;
 import { Settings_applyTheme } from "../models/settings";
 import { TextSize_apply } from "../utils/textSize";
 import { AppContext } from "./appContext";
@@ -69,6 +75,7 @@ interface IProps {
   audio: IAudioInterface;
   initialState: IState;
   queue: AsyncQueue;
+  persistence: Persistence;
 }
 
 function getScreenNameFromNavState(navState: NavigationState | undefined): IScreen {
@@ -99,13 +106,13 @@ function getScreenNameFromNavState(navState: NavigationState | undefined): IScre
 }
 
 export function AppView(props: IProps): JSX.Element | null {
-  const { client, audio, queue } = props;
+  const { client, audio, queue, persistence } = props;
   const env = useMemo<IEnv>(
-    () => ({ service: new Service(client), audio, queue, navigationRef, getCurrentScreenData }),
-    [client, audio, queue]
+    () => ({ service: new Service(client), audio, queue, persistence, navigationRef, getCurrentScreenData }),
+    [client, audio, queue, persistence]
   );
   const service = env.service;
-  const reducer = useMemo(() => reducerWrapper(true), []);
+  const reducer = useMemo(() => reducerWrapper(true, persistence), [persistence]);
   const onActions = useMemo(() => defaultOnActions(env), [env]);
   const [state, dispatch] = useThunkReducer<IState, IAction, IEnv>(reducer, props.initialState, env, onActions);
   const stateRef = useRef<IState>(state);
@@ -113,8 +120,6 @@ export function AppView(props: IProps): JSX.Element | null {
   useEffect(() => {
     stateRef.current = state;
   });
-  const shouldShowWhatsNew = WhatsNew_doesHaveNewUpdates(state.storage.whatsNew) || state.showWhatsNew;
-
   useEffect(() => {
     SendMessage_toAndroid({ type: "setAlwaysOnDisplay", value: `${!!state.storage.settings.alwaysOnDisplay}` });
     SendMessage_toIos({ type: "setAlwaysOnDisplay", value: `${!!state.storage.settings.alwaysOnDisplay}` });
@@ -122,6 +127,16 @@ export function AppView(props: IProps): JSX.Element | null {
 
   useEffect(() => {
     return ScreenRemovalCleanup_subscribe(dispatch);
+  }, []);
+
+  useEffect(() => {
+    if (typeof __DEV__ !== "undefined" && __DEV__) {
+      // setTimeout so a CDP-eval caller returns before the heavy login work saturates the JS
+      // thread — evaluating it inline can segfault Hermes' debugger VM
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (globalThis as any).debugLogin = (apiKey?: string) =>
+        new Promise((resolve) => setTimeout(() => dispatch(Thunk_debugTestLogin(apiKey, resolve)), 0));
+    }
   }, []);
 
   useEffect(() => {
@@ -171,16 +186,7 @@ export function AppView(props: IProps): JSX.Element | null {
     }
   }, [isNavReady, state.storage.currentProgramId, vmrDatabaseState.account, vmrDatabaseState.status]);
 
-  const prevShouldShowWhatsNew = useRef(false);
-  useEffect(() => {
-    if (!isNavReady) {
-      return;
-    }
-    if (shouldShowWhatsNew && state.storage.whatsNew != null && !prevShouldShowWhatsNew.current) {
-      navigateToModal("whatsnewModal");
-    }
-    prevShouldShowWhatsNew.current = !!(shouldShowWhatsNew && state.storage.whatsNew != null);
-  }, [isNavReady, shouldShowWhatsNew, state.storage.whatsNew]);
+  useOnloadModals(state, dispatch, isNavReady);
 
   const showCorruptedState = state.errors.corruptedstorage != null;
   const prevShowCorruptedState = useRef(false);
@@ -217,13 +223,21 @@ export function AppView(props: IProps): JSX.Element | null {
   const checkToursRef = useRef(() => {
     const tourId = TourConfigs_findTourId(stateRef.current, true);
     if (tourId && tourId !== stateRef.current.tour?.id) {
-      updateState(dispatch, [lb<IState>().p("tour").record({ id: tourId, enforced: false })], "Auto-start a tour");
+      updateState(
+        dispatch,
+        [lb<IState>().p("tour").record({ id: tourId, enforced: false, screenData: getCurrentScreenData() })],
+        "Auto-start a tour"
+      );
     }
   });
   checkToursRef.current = () => {
     const tourId = TourConfigs_findTourId(stateRef.current, true);
     if (tourId && tourId !== stateRef.current.tour?.id) {
-      updateState(dispatch, [lb<IState>().p("tour").record({ id: tourId, enforced: false })], "Auto-start a tour");
+      updateState(
+        dispatch,
+        [lb<IState>().p("tour").record({ id: tourId, enforced: false, screenData: getCurrentScreenData() })],
+        "Auto-start a tour"
+      );
     }
   };
 
@@ -534,6 +548,7 @@ export function AppView(props: IProps): JSX.Element | null {
           />
         )}
         <Notification dispatch={dispatch} notification={state.notification} />
+        <Toast toast={state.toast} dispatch={dispatch} />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

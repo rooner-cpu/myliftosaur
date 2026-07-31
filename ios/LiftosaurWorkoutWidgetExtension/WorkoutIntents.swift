@@ -3,6 +3,8 @@ import Foundation
 import ActivityKit
 import OSLog
 
+private let kCompleteSetRequestedDarwinName = "com.liftosaur.workout.completeSetRequested"
+
 @available(iOS 16.2, *)
 func checkAndEndActivityIfAppKilled() async {
     guard let sharedDefaults = UserDefaults(suiteName: "group.com.liftosaur.workout") else {
@@ -65,7 +67,8 @@ struct AdjustRestTimerIntent: LiveActivityIntent {
                 var updatedState = activity.content.state
                 updatedState.restTimer = LiveActivityRest(
                     restTimerSince: restTimerSince,
-                    restTimer: newRestTimer
+                    restTimer: newRestTimer,
+                    isAuto: updatedState.restTimer?.isAuto ?? false
                 )
                 let targetTimestamp = Double(restTimerSince + newRestTimer * 1000) / 1000.0
                 let staleDate = Date(timeIntervalSince1970: targetTimestamp)
@@ -133,16 +136,168 @@ struct CompleteSetIntent: LiveActivityIntent {
             await checkAndEndActivityIfAppKilled()
         }
 
+        let requestId = "\(self.entryIndex)-\(self.setIndex)-\(Int(Date().timeIntervalSince1970 * 1000))"
         if let sharedDefaults = UserDefaults(suiteName: "group.com.liftosaur.workout") {
+            sharedDefaults.removeObject(forKey: "completeSetAckRequestId")
             sharedDefaults.set(self.entryIndex, forKey: "completeSetEntryIndex")
             sharedDefaults.set(self.setIndex, forKey: "completeSetSetIndex")
             sharedDefaults.set(self.restTimer, forKey: "completeSetRestTimer")
             sharedDefaults.set(self.restTimerSince, forKey: "completeSetRestTimerSince")
             sharedDefaults.set(self.stateVersion, forKey: "completeSetStateVersion")
+            sharedDefaults.set(requestId, forKey: "completeSetRequestId")
             Logger.liveActivity.debug("Syncing complete set (\(self.entryIndex)/\(self.setIndex), version: \(self.stateVersion))")
             sharedDefaults.synchronize()
         }
 
+        // Wake the app to drain the request now instead of waiting on its 0.5s
+        // polling timer, then keep perform() suspended until the app reports it
+        // re-rendered the Live Activity. As a LiveActivityIntent this runs in the
+        // app's process, so awaiting here keeps the process scheduled long enough
+        // for the JS round-trip + ActivityKit update to complete (otherwise iOS
+        // suspends us mid-update and the lock-screen widget shows the stale set).
+        let center = CFNotificationCenterGetDarwinNotifyCenter()
+        CFNotificationCenterPostNotification(
+            center,
+            CFNotificationName(rawValue: kCompleteSetRequestedDarwinName as CFString),
+            nil,
+            nil,
+            true
+        )
+        await Self.waitForCompleteSetAck(requestId: requestId, timeout: 5.0)
+
+        return .result()
+    }
+
+    private static func waitForCompleteSetAck(requestId: String, timeout: TimeInterval) async {
+        let defaults = UserDefaults(suiteName: "group.com.liftosaur.workout")
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if defaults?.string(forKey: "completeSetAckRequestId") == requestId {
+                return
+            }
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+    }
+}
+
+@available(iOS 16, *)
+struct RecordSetTimerIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "Record Set Timer"
+
+    @Parameter(title: "Entry Index")
+    var entryIndex: Int
+
+    @Parameter(title: "Set Index")
+    var setIndex: Int
+
+    @Parameter(title: "Set Timer Since")
+    var setTimerSince: Int
+
+    @Parameter(title: "Keep Timing")
+    var keepTiming: Bool
+
+    init() {
+        self.entryIndex = 0
+        self.setIndex = 0
+        self.setTimerSince = 0
+        self.keepTiming = false
+    }
+
+    init(entryIndex: Int, setIndex: Int, setTimerSince: Int, keepTiming: Bool) {
+        self.entryIndex = entryIndex
+        self.setIndex = setIndex
+        self.setTimerSince = setTimerSince
+        self.keepTiming = keepTiming
+    }
+
+    func perform() async throws -> some IntentResult {
+        if #available(iOS 16.2, *) {
+            await checkAndEndActivityIfAppKilled()
+        }
+
+        let elapsedSeconds = max(0, Int((Date().timeIntervalSince1970 * 1000 - Double(setTimerSince)) / 1000.0))
+        let requestId = "record-\(entryIndex)-\(setIndex)-\(Int(Date().timeIntervalSince1970 * 1000))"
+        if let sharedDefaults = UserDefaults(suiteName: "group.com.liftosaur.workout") {
+            sharedDefaults.removeObject(forKey: "completeSetAckRequestId")
+            sharedDefaults.set(entryIndex, forKey: "recordSetTimerEntryIndex")
+            sharedDefaults.set(setIndex, forKey: "recordSetTimerSetIndex")
+            sharedDefaults.set(elapsedSeconds, forKey: "recordSetTimerElapsedSeconds")
+            sharedDefaults.set(keepTiming, forKey: "recordSetTimerKeepTiming")
+            sharedDefaults.set(requestId, forKey: "completeSetRequestId")
+            Logger.liveActivity.debug("Syncing record set timer (\(entryIndex)/\(setIndex), \(elapsedSeconds)s, keep: \(keepTiming))")
+            sharedDefaults.synchronize()
+        }
+
+        // Same Darwin nudge + ack the complete-set button uses: drain the request now instead of waiting on
+        // the 0.5s poll (which may not run after a background wake), and keep perform() alive until the app
+        // re-rendered the activity — otherwise the tap can be dropped when the app is suspended.
+        let center = CFNotificationCenterGetDarwinNotifyCenter()
+        CFNotificationCenterPostNotification(
+            center,
+            CFNotificationName(rawValue: kCompleteSetRequestedDarwinName as CFString),
+            nil,
+            nil,
+            true
+        )
+        await Self.waitForAck(requestId: requestId, timeout: 5.0)
+        return .result()
+    }
+
+    private static func waitForAck(requestId: String, timeout: TimeInterval) async {
+        let defaults = UserDefaults(suiteName: "group.com.liftosaur.workout")
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if defaults?.string(forKey: "completeSetAckRequestId") == requestId {
+                return
+            }
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+    }
+}
+
+// Used when recording the timed set would open the AMRAP modal (canCompleteFromLiveActivity == false):
+// it can't be done silently in the background, so this opens the app and writes the same record keys the
+// app polls — the in-app flow then records and shows the AMRAP modal (mirrors OpenWorkoutIntent).
+@available(iOS 16, *)
+struct OpenWorkoutRecordSetTimerIntent: AppIntent {
+    static var title: LocalizedStringResource = "Open Workout and Record Set Timer"
+    static var openAppWhenRun: Bool = true
+
+    @Parameter(title: "Entry Index")
+    var entryIndex: Int
+
+    @Parameter(title: "Set Index")
+    var setIndex: Int
+
+    @Parameter(title: "Set Timer Since")
+    var setTimerSince: Int
+
+    @Parameter(title: "Keep Timing")
+    var keepTiming: Bool
+
+    init() {
+        self.entryIndex = 0
+        self.setIndex = 0
+        self.setTimerSince = 0
+        self.keepTiming = false
+    }
+
+    init(entryIndex: Int, setIndex: Int, setTimerSince: Int, keepTiming: Bool) {
+        self.entryIndex = entryIndex
+        self.setIndex = setIndex
+        self.setTimerSince = setTimerSince
+        self.keepTiming = keepTiming
+    }
+
+    func perform() async throws -> some IntentResult {
+        let elapsedSeconds = max(0, Int((Date().timeIntervalSince1970 * 1000 - Double(setTimerSince)) / 1000.0))
+        if let sharedDefaults = UserDefaults(suiteName: "group.com.liftosaur.workout") {
+            sharedDefaults.set(entryIndex, forKey: "recordSetTimerEntryIndex")
+            sharedDefaults.set(setIndex, forKey: "recordSetTimerSetIndex")
+            sharedDefaults.set(elapsedSeconds, forKey: "recordSetTimerElapsedSeconds")
+            sharedDefaults.set(keepTiming, forKey: "recordSetTimerKeepTiming")
+            sharedDefaults.synchronize()
+        }
         return .result()
     }
 }
@@ -190,6 +345,7 @@ struct OpenWorkoutIntent: AppIntent {
         Logger.liveActivity.debug("OpenWorkoutIntent.perform (completeSet=\(self.completeSet))")
         if completeSet {
             if let sharedDefaults = UserDefaults(suiteName: "group.com.liftosaur.workout") {
+                sharedDefaults.removeObject(forKey: "completeSetRequestId")
                 sharedDefaults.set(entryIndex, forKey: "completeSetEntryIndex")
                 sharedDefaults.set(setIndex, forKey: "completeSetSetIndex")
                 sharedDefaults.set(restTimer, forKey: "completeSetRestTimer")

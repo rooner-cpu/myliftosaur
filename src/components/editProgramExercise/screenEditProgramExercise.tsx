@@ -7,7 +7,8 @@ import { IDispatch } from "../../ducks/types";
 import { IDayData, ISettings } from "../../types";
 import { INavCommon, IState } from "../../models/state";
 import { lb } from "lens-shmens";
-import { navigateToModal } from "../../navigation/navigationService";
+import { useIsFocused } from "@react-navigation/native";
+import { navigateToModal, getCurrentRouteName } from "../../navigation/navigationService";
 import { useUndoRedo } from "../../pages/builder/utils/undoredo";
 import { ILensDispatch } from "../../utils/useLensReducer";
 import { useNavOptions } from "../../navigation/useNavOptions";
@@ -17,6 +18,7 @@ import {
   PlannerProgramExercise_getProgressDefaultArgs,
 } from "../../pages/planner/models/plannerProgramExercise";
 import { EditProgramExerciseWarmups } from "./editProgramExerciseWarmups";
+import { EditProgramExerciseVariations } from "./editProgramExerciseVariations";
 import { buildPlannerDispatch } from "../../utils/plannerDispatch";
 import { IconKebab } from "../icons/iconKebab";
 import { ActionMenu, IActionMenuAction } from "../actionMenu";
@@ -69,20 +71,57 @@ export function ScreenEditProgramExercise(props: IProps): JSX.Element {
   const lbProgram = lb<IPlannerExerciseState>().p("current").p("program").pi("planner");
 
   const exercisePickerState = props.plannerState.ui.exercisePickerState;
-  const prevExercisePickerState = useRef(exercisePickerState);
-  useEffect(() => {
-    if (exercisePickerState && !prevExercisePickerState.current) {
-      navigateToModal("editProgramExercisePickerModal", {
-        context: "editProgramExercise",
-        programId: props.programId,
-        exerciseStateKey: props.exerciseStateKey,
-        dayData: props.dayData,
-        change: "all",
-        exerciseKey: props.exerciseKey,
-      });
+  // See screenProgram.tsx. Open the picker whenever a request is pending but the
+  // picker route isn't actually open (so it survives a dropped navigation), but
+  // stay a no-op while it's up so `.state` mutations don't re-push it.
+  const pickerStateRef = useRef(exercisePickerState);
+  pickerStateRef.current = exercisePickerState;
+  const navParamsRef = useRef({
+    programId: props.programId,
+    exerciseStateKey: props.exerciseStateKey,
+    dayData: props.dayData,
+    exerciseKey: props.exerciseKey,
+    change: ui.exercisePickerChange,
+    variationIndex: ui.exercisePickerVariationIndex,
+  });
+  navParamsRef.current = {
+    programId: props.programId,
+    exerciseStateKey: props.exerciseStateKey,
+    dayData: props.dayData,
+    exerciseKey: props.exerciseKey,
+    change: ui.exercisePickerChange,
+    variationIndex: ui.exercisePickerVariationIndex,
+  };
+  const openPickerIfNeeded = useCallback(() => {
+    if (!pickerStateRef.current || getCurrentRouteName() === "editProgramExercisePickerModal") {
+      return;
     }
-    prevExercisePickerState.current = exercisePickerState;
-  }, [exercisePickerState]);
+    const p = navParamsRef.current;
+    navigateToModal("editProgramExercisePickerModal", {
+      context: "editProgramExercise",
+      programId: p.programId,
+      exerciseStateKey: p.exerciseStateKey,
+      dayData: p.dayData,
+      change: p.change ?? "all",
+      variationIndex: p.variationIndex,
+      exerciseKey: p.exerciseKey,
+    });
+  }, []);
+  const navigatedPickerRef = useRef(exercisePickerState);
+  useEffect(() => {
+    if (exercisePickerState && navigatedPickerRef.current !== exercisePickerState) {
+      openPickerIfNeeded();
+    }
+    navigatedPickerRef.current = exercisePickerState;
+  }, [exercisePickerState, openPickerIfNeeded]);
+  // Recover a dropped navigation when the screen regains focus (e.g. a competing
+  // modal that stole the navigation closed) with a request still pending.
+  const isFocused = useIsFocused();
+  useEffect(() => {
+    if (isFocused) {
+      openPickerIfNeeded();
+    }
+  }, [isFocused, openPickerIfNeeded]);
 
   const toggleProgress = useCallback(() => {
     if (!plannerExercise) {
@@ -142,20 +181,28 @@ export function ScreenEditProgramExercise(props: IProps): JSX.Element {
       [
         lbProgram.recordModify((program) => {
           const notused = plannerExercise!.notused;
-          return EditProgramUiHelpers_changeAllInstances(
-            program,
-            plannerExercise!.fullName,
-            props.settings,
-            true,
-            (e) => {
-              e.notused = !notused;
-            }
-          );
+          return EditProgramUiHelpers_changeAllInstances(program, plannerExercise!.key, props.settings, true, (e) => {
+            e.notused = !notused;
+          });
         }),
       ],
       "Toggle used status"
     );
   }, [plannerDispatch, plannerExercise, props.settings, lbProgram]);
+
+  const toggleExerciseVariations = useCallback(() => {
+    plannerDispatch(
+      lb<IPlannerExerciseState>()
+        .p("ui")
+        .p("isExerciseVariationsEnabled")
+        .record(!plannerState.ui.isExerciseVariationsEnabled),
+      "Toggle exercise variations"
+    );
+  }, [plannerDispatch, plannerState.ui.isExerciseVariationsEnabled]);
+
+  // Disabling only hides the empty entry point — never a real ladder, so it's offered only when ≤1 rung.
+  const canToggleExerciseVariations =
+    !ui.isExerciseVariationsEnabled || (plannerExercise?.exerciseVariations?.length ?? 0) <= 1;
 
   const kebabActions: IActionMenuAction[] = plannerExercise
     ? [
@@ -169,6 +216,15 @@ export function ScreenEditProgramExercise(props: IProps): JSX.Element {
           onPress: toggleUpdate,
           testID: "program-exercise-toggle-update",
         },
+        ...(canToggleExerciseVariations
+          ? [
+              {
+                label: `${ui.isExerciseVariationsEnabled ? "Disable" : "Enable"} Exercise Variations`,
+                onPress: toggleExerciseVariations,
+                testID: "program-exercise-toggle-exercise-variations",
+              },
+            ]
+          : []),
         {
           label: `Make ${plannerExercise.notused ? "Used" : "Unused"}`,
           onPress: toggleUsed,
@@ -228,6 +284,19 @@ export function ScreenEditProgramExercise(props: IProps): JSX.Element {
           plannerDispatch={plannerDispatch}
         />
       </View>
+      {ui.isExerciseVariationsEnabled && (
+        <View className="mb-4">
+          <EditProgramExerciseVariations
+            plannerExercise={plannerExercise}
+            planner={plannerState.current.program.planner}
+            settings={props.settings}
+            plannerDispatch={plannerDispatch}
+            dispatch={props.dispatch}
+            programId={props.programId}
+            exerciseStateKey={props.exerciseStateKey}
+          />
+        </View>
+      )}
       <View className="mb-4">
         {ui.isProgressEnabled && (
           <EditProgramExerciseProgress

@@ -99,6 +99,7 @@ import {
   PlannerProgramExercise_programWarmups,
   PlannerProgramExercise_getProgressScript,
   PlannerProgramExercise_currentEvaluatedSetVariationIndex,
+  PlannerProgramExercise_currentExerciseVariationIndex,
   PlannerProgramExercise_currentDescriptionIndex,
   PlannerProgramExercise_getState,
   PlannerProgramExercise_createExerciseFromEntry,
@@ -237,15 +238,21 @@ export function Program_isEmpty(program?: IProgram | IEvaluatedProgram): boolean
   return program?.id === emptyProgramId;
 }
 
-export function Program_uses1RM(program: IEvaluatedProgram): boolean {
-  const allExercises = Program_getAllProgramExercises(program);
-  return allExercises.some((e) => ProgramExercise_doesUse1RM(e));
-}
+export const Program_uses1RM = memoize(
+  (program: IEvaluatedProgram): boolean => {
+    const allExercises = Program_getAllProgramExercises(program);
+    return allExercises.some((e) => ProgramExercise_doesUse1RM(e));
+  },
+  { maxSize: 10 }
+);
 
-export function Program_usesRPE(program: IEvaluatedProgram): boolean {
-  const allExercises = Program_getAllProgramExercises(program);
-  return allExercises.some((e) => ProgramExercise_doesUseRPE(e));
-}
+export const Program_usesRPE = memoize(
+  (program: IEvaluatedProgram): boolean => {
+    const allExercises = Program_getAllProgramExercises(program);
+    return allExercises.some((e) => ProgramExercise_doesUseRPE(e));
+  },
+  { maxSize: 10 }
+);
 
 export function Program_getProgramExercisesFromExerciseType(
   program: IEvaluatedProgram,
@@ -303,6 +310,9 @@ export function Program_nextHistoryEntry(
       isUnilateral: Exercise_getIsUnilateral(exercise, settings),
       rpe: programSet.rpe,
       timer: programSet.timer,
+      setTimer: programSet.setTimer,
+      isOverflowSetTimer: programSet.isOverflowSetTimer,
+      auto: programSet.auto,
       logRpe: programSet.logRpe,
       askWeight: programSet.askWeight,
       originalWeight: programSet.weight,
@@ -457,6 +467,7 @@ export function Program_runExerciseFinishDayScript(
   const script = PlannerProgramExercise_getProgressScript(programExercise) || "";
   const setVariationIndex = PlannerProgramExercise_currentEvaluatedSetVariationIndex(programExercise);
   const descriptionIndex = PlannerProgramExercise_currentDescriptionIndex(programExercise);
+  const exerciseVariationIndex = PlannerProgramExercise_currentExerciseVariationIndex(programExercise);
 
   const bindings = Progress_createScriptBindings(
     dayData,
@@ -466,7 +477,8 @@ export function Program_runExerciseFinishDayScript(
     Stats_getCurrentMovingAverageBodyweight(stats, settings),
     undefined,
     setVariationIndex + 1,
-    descriptionIndex + 1
+    descriptionIndex + 1,
+    exerciseVariationIndex + 1
   );
   const fns = Progress_createScriptFunctions(settings);
   let updates: ILiftoscriptEvaluatorUpdate[] = [];
@@ -518,6 +530,7 @@ export function Program_runFinishDayScript(
   const state = PlannerProgramExercise_getState(programExercise);
   const setVariationIndex = PlannerProgramExercise_currentEvaluatedSetVariationIndex(programExercise);
   const descriptionIndex = PlannerProgramExercise_currentDescriptionIndex(programExercise);
+  const exerciseVariationIndex = PlannerProgramExercise_currentExerciseVariationIndex(programExercise);
   const bindings = Progress_createScriptBindings(
     dayData,
     entry,
@@ -526,7 +539,8 @@ export function Program_runFinishDayScript(
     Stats_getCurrentMovingAverageBodyweight(stats, settings),
     undefined,
     setVariationIndex + 1,
-    descriptionIndex + 1
+    descriptionIndex + 1,
+    exerciseVariationIndex + 1
   );
   const fns = Progress_createScriptFunctions(settings);
 

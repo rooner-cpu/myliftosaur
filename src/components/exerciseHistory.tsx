@@ -1,14 +1,23 @@
 import { JSX, memo, useCallback, useMemo, useState } from "react";
+import { usePerfWhyRender } from "../utils/usePerfWhyRender";
+import { useTrackClick } from "../utils/clickTracking";
 import { View } from "react-native";
 import { Text } from "./primitives/text";
 import { Pressable } from "react-native";
 import { IDispatch } from "../ducks/types";
 import { IExerciseType, IHistoryRecord, ISettings, IUnit } from "../types";
-import { Weight_print, Weight_is, Weight_isPct, Weight_display } from "../models/weight";
+import { Weight_print, Weight_is, Weight_isPct, Weight_display, Weight_multiply } from "../models/weight";
 import { DateUtils_format } from "../utils/date";
 import { MenuItemWrapper } from "./menuItem";
 import { useProgressiveItems } from "../utils/useProgressiveItems";
-import { Exercise_get, Exercise_fullName, Exercise_eq, Exercise_toKey, IExercise } from "../models/exercise";
+import {
+  Exercise_get,
+  Exercise_fullName,
+  Exercise_eq,
+  Exercise_toKey,
+  Exercise_getVolumeMultiplier,
+  IExercise,
+} from "../models/exercise";
 import { Reps_volume } from "../models/set";
 import { History_getPersonalRecords, IPersonalRecords } from "../models/history";
 import { ObjectUtils_keys } from "../utils/object";
@@ -33,6 +42,7 @@ interface IExerciseHistoryProps {
 }
 
 export const ExerciseHistory = memo((props: IExerciseHistoryProps): JSX.Element => {
+  usePerfWhyRender("history", props as unknown as Record<string, unknown>);
   const fullExercise = useMemo(
     () => Exercise_get(props.exerciseType, props.settings.exercises),
     [props.exerciseType, props.settings.exercises]
@@ -58,8 +68,11 @@ export const ExerciseHistory = memo((props: IExerciseHistoryProps): JSX.Element 
   const visibleHistory = useProgressiveItems(history, {
     initialBatch: 5,
     batchSize: 15,
+    idleCap: 10,
     debugLabel: "ExerciseHistory",
-    resetKey: `${hideWithoutExerciseNotes ? 1 : 0}|${hideWithoutWorkoutNotes ? 1 : 0}|${ascendingSort ? 1 : 0}`,
+    resetKey: `${Exercise_toKey(props.exerciseType)}|${hideWithoutExerciseNotes ? 1 : 0}|${
+      hideWithoutWorkoutNotes ? 1 : 0
+    }|${ascendingSort ? 1 : 0}`,
   });
   const dispatch = props.dispatch;
   const onToggleFilters = useCallback(() => setShowFilters((s) => !s), []);
@@ -134,6 +147,7 @@ export const ExerciseHistory = memo((props: IExerciseHistoryProps): JSX.Element 
           historyRecord={historyRecord}
           fullExercise={fullExercise}
           units={props.settings.units}
+          settings={props.settings}
           prs={allPrs[historyRecord.id]}
           dispatch={props.dispatch}
         />
@@ -146,20 +160,23 @@ interface IExerciseHistoryRecordProps {
   historyRecord: IHistoryRecord;
   fullExercise: IExercise;
   units: IUnit;
+  settings: ISettings;
   prs: IPersonalRecords[string];
   dispatch: IDispatch;
 }
 
 const ExerciseHistoryRecord = memo((props: IExerciseHistoryRecordProps): JSX.Element => {
-  const { historyRecord, fullExercise, units, prs, dispatch } = props;
+  const { historyRecord, fullExercise, units, settings, prs, dispatch } = props;
   const rem = useRem();
   const secondary = Tailwind_semantic().text.secondary;
   const xs = StyledText_remToPx("xs", rem);
   const exerciseEntries = historyRecord.entries.filter((e) => Exercise_eq(e.exercise, fullExercise));
   const exerciseNotes = exerciseEntries.map((e) => e.notes).filter((e) => e);
+  const trackClick = useTrackClick();
   const onClick = useCallback(() => {
+    trackClick("exercise-history-record");
     dispatch(Thunk_editHistoryRecord(historyRecord));
-  }, [dispatch, historyRecord]);
+  }, [dispatch, historyRecord, trackClick]);
   return (
     <MenuItemWrapper onClick={onClick} name={`${historyRecord.startTime}`}>
       <View className="py-2">
@@ -180,7 +197,10 @@ const ExerciseHistoryRecord = memo((props: IExerciseHistoryRecordProps): JSX.Ele
                   const name = { rm1: "1 Rep Max" }[key] || key;
                   state[name] = vars[key];
                 }
-                const volume = Reps_volume(entry.sets, units);
+                const volume = Weight_multiply(
+                  Reps_volume(entry.sets, units),
+                  Exercise_getVolumeMultiplier(entry.exercise, settings)
+                );
                 return (
                   <View key={ei} className="pt-1">
                     <View className="items-end">

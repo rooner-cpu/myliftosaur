@@ -10,7 +10,9 @@ import {
   UpdateCommand,
   DeleteCommand,
   BatchGetCommand,
+  BatchGetCommandInput,
   BatchWriteCommand,
+  BatchWriteCommandInput,
   NativeAttributeValue,
 } from "@aws-sdk/lib-dynamodb";
 import { CollectionUtils_inGroupsOf, CollectionUtils_compact } from "../../src/utils/collection";
@@ -64,7 +66,8 @@ export interface IDynamoUtil {
     expression: string;
     attrs?: Record<string, string>;
     values?: Partial<Record<string, NativeAttributeValue>>;
-  }): Promise<void>;
+    returnValues?: "ALL_NEW" | "UPDATED_NEW";
+  }): Promise<Record<string, NativeAttributeValue> | undefined>;
   remove(args: { tableName: string; key: Record<string, NativeAttributeValue> }): Promise<void>;
   batchGet<T>(args: { tableName: string; keys: Record<string, NativeAttributeValue>[] }): Promise<T[]>;
   batchDelete(args: { tableName: string; keys: Record<string, NativeAttributeValue>[] }): Promise<void>;
@@ -275,12 +278,20 @@ export class DynamoUtil implements IDynamoUtil {
       await this.dynamo.send(new PutCommand({ TableName: args.tableName, Item: item }));
     } catch (error) {
       const e = error as Error;
-      this.log.log(`FAILED Dynamo put: ${args.tableName} - `, args.item, ` - ${Date.now() - startTime}ms`);
+      this.log.log(
+        `FAILED Dynamo put: ${args.tableName} - `,
+        DynamoUtil_redactForLog(args.item),
+        ` - ${Date.now() - startTime}ms`
+      );
       this.log.log(e.message);
       this.log.log(e.stack);
       throw e;
     }
-    this.log.log(`Dynamo put: ${args.tableName} - `, args.item, ` - ${Date.now() - startTime}ms`);
+    this.log.log(
+      `Dynamo put: ${args.tableName} - `,
+      DynamoUtil_redactForLog(args.item),
+      ` - ${Date.now() - startTime}ms`
+    );
   }
 
   public async putIfNotExists(args: {
@@ -317,7 +328,7 @@ export class DynamoUtil implements IDynamoUtil {
 
       this.log.log(
         `Dynamo putIfNotExists (inserted): ${args.tableName} - `,
-        args.item,
+        DynamoUtil_redactForLog(args.item),
         ` - ${Date.now() - startTime}ms`
       );
       return true;
@@ -326,12 +337,16 @@ export class DynamoUtil implements IDynamoUtil {
       if (e.name === "ConditionalCheckFailedException") {
         this.log.log(
           `Dynamo putIfNotExists (already exists): ${args.tableName} - `,
-          args.item,
+          DynamoUtil_redactForLog(args.item),
           ` - ${Date.now() - startTime}ms`
         );
         return false;
       }
-      this.log.log(`FAILED Dynamo putIfNotExists: ${args.tableName} - `, args.item, ` - ${Date.now() - startTime}ms`);
+      this.log.log(
+        `FAILED Dynamo putIfNotExists: ${args.tableName} - `,
+        DynamoUtil_redactForLog(args.item),
+        ` - ${Date.now() - startTime}ms`
+      );
       this.log.log(e.message);
       this.log.log(e.stack);
       throw e;
@@ -344,29 +359,33 @@ export class DynamoUtil implements IDynamoUtil {
     expression: string;
     attrs?: Record<string, string>;
     values?: Partial<Record<string, NativeAttributeValue>>;
-  }): Promise<void> {
+    returnValues?: "ALL_NEW" | "UPDATED_NEW";
+  }): Promise<Record<string, NativeAttributeValue> | undefined> {
     const startTime = Date.now();
     const clampedPaths: string[] = [];
     const values = DynamoUtil_sanitizeNumbers(args.values, clampedPaths);
     if (clampedPaths.length > 0) {
       this.log.log(`Dynamo update: clamped out-of-range numbers in ${args.tableName}: `, clampedPaths);
     }
+    let attributes: Record<string, NativeAttributeValue> | undefined;
     try {
-      await this.dynamo.send(
+      const res = await this.dynamo.send(
         new UpdateCommand({
           TableName: args.tableName,
           Key: args.key,
           UpdateExpression: args.expression,
           ExpressionAttributeNames: args.attrs,
           ExpressionAttributeValues: values,
+          ReturnValues: args.returnValues,
         })
       );
+      attributes = res.Attributes;
     } catch (e) {
       this.log.log(
         `FAILED Dynamo update: ${args.tableName} - `,
         args.key,
         args.expression,
-        args.values,
+        DynamoUtil_redactForLog(args.values),
         ` - ${Date.now() - startTime}ms`
       );
       throw e;
@@ -375,9 +394,10 @@ export class DynamoUtil implements IDynamoUtil {
       `Dynamo update: ${args.tableName} - `,
       args.key,
       args.expression,
-      args.values,
+      DynamoUtil_redactForLog(args.values),
       ` - ${Date.now() - startTime}ms`
     );
+    return attributes;
   }
 
   public async remove(args: { tableName: string; key: Record<string, NativeAttributeValue> }): Promise<void> {
@@ -396,16 +416,80 @@ export class DynamoUtil implements IDynamoUtil {
     this.log.log(`Dynamo delete: ${args.tableName} - `, args.key, ` - ${Date.now() - startTime}ms`);
   }
 
+  // DynamoDB BatchWriteItem can succeed (HTTP 200) while leaving some items unwritten in
+  // `UnprocessedItems` (e.g. under throttling) - the SDK does NOT auto-retry those. Re-send only
+  // the leftovers with exponential backoff, and throw if they can't be drained so callers never
+  // silently lose writes.
+  private async sendBatchWriteWithRetry(
+    requestItems: NonNullable<BatchWriteCommandInput["RequestItems"]>,
+    context: string
+  ): Promise<void> {
+    const countRequests = (items: NonNullable<BatchWriteCommandInput["RequestItems"]>): number =>
+      Object.keys(items).reduce((sum, table) => sum + (items[table]?.length ?? 0), 0);
+
+    let pending = requestItems;
+    for (let attempt = 0; attempt < BATCH_MAX_ATTEMPTS; attempt += 1) {
+      const result = await this.dynamo.send(new BatchWriteCommand({ RequestItems: pending }));
+      const unprocessed = (result.UnprocessedItems ?? {}) as NonNullable<BatchWriteCommandInput["RequestItems"]>;
+      if (countRequests(unprocessed) === 0) {
+        return;
+      }
+      pending = unprocessed;
+      this.log.log(
+        `Dynamo batch write retry: ${context} - ${countRequests(pending)} unprocessed item(s), attempt ${attempt + 1}`
+      );
+      await new Promise((resolve) => setTimeout(resolve, batchBackoffMs(attempt)));
+    }
+    throw new Error(
+      `Dynamo batch write (${context}) left ${countRequests(pending)} unprocessed item(s) after ${BATCH_MAX_ATTEMPTS} attempts`
+    );
+  }
+
+  // Like sendBatchWriteWithRetry, but for reads: BatchGetItem can return some keys in
+  // `UnprocessedKeys` (HTTP 200) under throttling, which would silently truncate results. Re-fetch
+  // only those keys with backoff, accumulating responses, and throw if they can't be drained.
+  private async sendBatchGetWithRetry(
+    requestItems: NonNullable<BatchGetCommandInput["RequestItems"]>,
+    context: string
+  ): Promise<Record<string, Record<string, NativeAttributeValue>[]>> {
+    const countKeys = (items: NonNullable<BatchGetCommandInput["RequestItems"]>): number =>
+      Object.keys(items).reduce((sum, table) => sum + (items[table]?.Keys?.length ?? 0), 0);
+
+    const responses: Record<string, Record<string, NativeAttributeValue>[]> = {};
+    let pending = requestItems;
+    for (let attempt = 0; attempt < BATCH_MAX_ATTEMPTS; attempt += 1) {
+      const result = await this.dynamo.send(new BatchGetCommand({ RequestItems: pending }));
+      for (const table of Object.keys(result.Responses ?? {})) {
+        responses[table] = (responses[table] ?? []).concat(result.Responses?.[table] ?? []);
+      }
+      const unprocessed = (result.UnprocessedKeys ?? {}) as NonNullable<BatchGetCommandInput["RequestItems"]>;
+      if (countKeys(unprocessed) === 0) {
+        return responses;
+      }
+      pending = unprocessed;
+      this.log.log(
+        `Dynamo batch get retry: ${context} - ${countKeys(pending)} unprocessed key(s), attempt ${attempt + 1}`
+      );
+      await new Promise((resolve) => setTimeout(resolve, batchBackoffMs(attempt)));
+    }
+    throw new Error(
+      `Dynamo batch get (${context}) left ${countKeys(pending)} unprocessed key(s) after ${BATCH_MAX_ATTEMPTS} attempts`
+    );
+  }
+
   public async batchGet<T>(args: { tableName: string; keys: Record<string, NativeAttributeValue>[] }): Promise<T[]> {
+    if (args.keys.length === 0) {
+      return [];
+    }
     const startTime = Date.now();
     try {
       const result = await Promise.all(
         CollectionUtils_inGroupsOf(95, args.keys).map((group) => {
-          return this.dynamo.send(new BatchGetCommand({ RequestItems: { [args.tableName]: { Keys: group } } }));
+          return this.sendBatchGetWithRetry({ [args.tableName]: { Keys: group } }, `get ${args.tableName}`);
         })
       );
       this.log.log(`Dynamo batch get: ${args.tableName} - `, args.keys, ` - ${Date.now() - startTime}ms`);
-      return CollectionUtils_compact(result.map((r) => r.Responses?.[args.tableName] || [])).flat() as T[];
+      return CollectionUtils_compact(result.map((r) => r[args.tableName] || [])).flat() as T[];
     } catch (e) {
       this.log.log(`FAILED Dynamo batch get: ${args.tableName} - `, args.keys, ` - ${Date.now() - startTime}ms`);
       throw e;
@@ -420,16 +504,9 @@ export class DynamoUtil implements IDynamoUtil {
       CollectionUtils_inGroupsOf(25, args.keys).map(async (group) => {
         const startTime = Date.now();
         try {
-          await this.dynamo.send(
-            new BatchWriteCommand({
-              RequestItems: {
-                [args.tableName]: group.map((key) => ({
-                  DeleteRequest: {
-                    Key: key,
-                  },
-                })),
-              },
-            })
+          await this.sendBatchWriteWithRetry(
+            { [args.tableName]: group.map((key) => ({ DeleteRequest: { Key: key } })) },
+            `delete ${args.tableName}`
           );
         } catch (e) {
           this.log.log(`FAILED Dynamo batch delete: ${args.tableName} - `, group, ` - ${Date.now() - startTime}ms`);
@@ -453,16 +530,9 @@ export class DynamoUtil implements IDynamoUtil {
       CollectionUtils_inGroupsOf(25, sanitizedItems).map(async (group) => {
         const startTime = Date.now();
         try {
-          await this.dynamo.send(
-            new BatchWriteCommand({
-              RequestItems: {
-                [args.tableName]: group.map((item) => ({
-                  PutRequest: {
-                    Item: item,
-                  },
-                })),
-              },
-            })
+          await this.sendBatchWriteWithRetry(
+            { [args.tableName]: group.map((item) => ({ PutRequest: { Item: item } })) },
+            `put ${args.tableName}`
           );
         } catch (e) {
           this.log.log(
@@ -477,7 +547,7 @@ export class DynamoUtil implements IDynamoUtil {
             );
             this.log.log(
               "Duplicated items: ",
-              group.map((item) => JSON.stringify(item))
+              group.map((item) => JSON.stringify(DynamoUtil_redactForLog(item)))
             );
           }
           if (e instanceof Error && e.message.includes("Item size has exceeded the maximum allowed size")) {
@@ -486,7 +556,7 @@ export class DynamoUtil implements IDynamoUtil {
               this.log.log(`batchPut payload length: ${json.length}`);
               for (let i = 0; i < group.length; i++) {
                 const item = group[i];
-                const jsonItem = JSON.stringify(item);
+                const jsonItem = JSON.stringify(DynamoUtil_redactForLog(item));
                 this.log.log(`batchPut payload[${i}] length: ${JSON.stringify(jsonItem).length}`);
                 if (jsonItem.length > 100000) {
                   this.log.log(`batchPut payload[${i}]: ${jsonItem.slice(0, 100000)}`);
@@ -504,6 +574,33 @@ export class DynamoUtil implements IDynamoUtil {
       })
     );
   }
+}
+
+const BATCH_MAX_ATTEMPTS = 8;
+
+// Exponential backoff with full jitter, capped at ~2s, so retries of throttled batch operations
+// spread out instead of hammering the table in lockstep.
+function batchBackoffMs(attempt: number): number {
+  const ceiling = Math.min(2000, 50 * Math.pow(2, attempt));
+  return Math.floor(Math.random() * ceiling);
+}
+
+const SENSITIVE_LOG_KEYS = new Set(["passwordHash"]);
+
+// Replace sensitive fields (e.g. password hashes) with a placeholder before an
+// item/values object is written to logs. Recursive so nested items are covered.
+export function DynamoUtil_redactForLog<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((v) => DynamoUtil_redactForLog(v)) as unknown as T;
+  }
+  if (value != null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      result[k] = SENSITIVE_LOG_KEYS.has(k) ? "[redacted]" : DynamoUtil_redactForLog(v);
+    }
+    return result as unknown as T;
+  }
+  return value;
 }
 
 // The AWS SDK throws when marshalling a finite number outside the IEEE-safe integer range

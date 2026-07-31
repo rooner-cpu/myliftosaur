@@ -24,7 +24,7 @@ import {
   Progress_isCurrent,
   Progress_editNotes,
   Progress_getColorToSupersetGroup,
-  Progress_isFullyFinishedSet,
+  Progress_isFullyEmptyOrFinishedSet,
   Progress_getNextSupersetEntry,
 } from "../models/progress";
 import { IconPlus2 } from "./icons/iconPlus2";
@@ -51,7 +51,9 @@ import { Dialog_alert, Dialog_confirm } from "../utils/dialog";
 import type RB from "rollbar";
 import { useEqual } from "../utils/useEqual";
 import { usePerfRenderCount } from "../utils/usePerfRenderCount";
+import { PerfProbeSubtree } from "../utils/perfProbeSubtree";
 import { NavScreenContent } from "../navigation/NavScreenContent";
+import { useTrackClick } from "../utils/clickTracking";
 
 declare let Rollbar: RB | undefined;
 
@@ -72,11 +74,11 @@ interface IWorkoutViewProps {
 
 function WorkoutInner(props: IWorkoutViewProps): JSX.Element {
   usePerfRenderCount("Workout");
-  const selectedEntry = props.progress.entries[props.progress.ui?.currentEntryIndex ?? 0];
+  const selectedEntry = props.progress.entries[props.progress.currentEntryIndex ?? 0];
   const description = props.programDay?.description;
   const forceUpdateEntryIndex = !!props.progress.ui?.forceUpdateEntryIndex;
   const { width: windowWidth } = useWindowDimensions();
-  const currentEntryIndex = props.progress.ui?.currentEntryIndex ?? 0;
+  const currentEntryIndex = props.progress.currentEntryIndex ?? 0;
   const [enableReorder, setEnableReorder] = useState(false);
 
   const [renderedIndices, setRenderedIndices] = useState<ReadonlySet<number>>(() => {
@@ -133,7 +135,7 @@ function WorkoutInner(props: IWorkoutViewProps): JSX.Element {
       if (!isExternal) {
         updateProgress(
           dispatch,
-          lb<IHistoryRecord>().pi("ui", {}).p("currentEntryIndex").record(selectedIndex),
+          lb<IHistoryRecord>().p("currentEntryIndex").record(selectedIndex),
           "scroll-exercise-tab"
         );
       } else {
@@ -158,7 +160,7 @@ function WorkoutInner(props: IWorkoutViewProps): JSX.Element {
       updateProgress(
         dispatch,
         [
-          lb<IHistoryRecord>().pi("ui", {}).p("currentEntryIndex").record(entryIndex),
+          lb<IHistoryRecord>().p("currentEntryIndex").record(entryIndex),
           lb<IHistoryRecord>()
             .pi("ui", {})
             .p("forceUpdateEntryIndex")
@@ -227,41 +229,43 @@ function WorkoutInner(props: IWorkoutViewProps): JSX.Element {
       <View className="pb-8">
         {selectedEntry != null && (
           <View className="mt-2">
-            <WorkoutExercisePager
-              currentEntryIndex={currentEntryIndex}
-              entryCount={progressEntries.length}
-              windowWidth={windowWidth}
-              pageHeight={pagerHeight}
-              forceUpdateEntryIndex={forceUpdateEntryIndex}
-              onIndexChange={onPagerIndexChange}
-            >
-              {progressEntries.map((entry, entryIndex) => (
-                <WorkoutExercisePage
-                  key={entry.id}
-                  entry={entry}
-                  entryIndex={entryIndex}
-                  shouldRender={renderedIndices.has(entryIndex)}
-                  windowWidth={windowWidth}
-                  onPageLayout={onPageLayout}
-                  day={progressDay}
-                  stats={props.stats}
-                  history={props.history}
-                  otherStates={otherStates}
-                  program={props.program}
-                  programDay={props.programDay}
-                  progressId={progressId}
-                  progressStartTime={progressStartTime}
-                  userPromptedStateVars={progressUserPromptedStateVars}
-                  supersetEntry={supersetByEntryId.get(entry.id)}
-                  prevData={prevExerciseData[Exercise_toKey(entry.exercise)]}
-                  isCurrentProgress={isCurrentProgress}
-                  helps={props.helps}
-                  subscription={props.subscription}
-                  settings={props.settings}
-                  dispatch={dispatch}
-                />
-              ))}
-            </WorkoutExercisePager>
+            <PerfProbeSubtree id="workout-list">
+              <WorkoutExercisePager
+                currentEntryIndex={currentEntryIndex}
+                entryCount={progressEntries.length}
+                windowWidth={windowWidth}
+                pageHeight={pagerHeight}
+                forceUpdateEntryIndex={forceUpdateEntryIndex}
+                onIndexChange={onPagerIndexChange}
+              >
+                {progressEntries.map((entry, entryIndex) => (
+                  <WorkoutExercisePage
+                    key={entry.id}
+                    entry={entry}
+                    entryIndex={entryIndex}
+                    shouldRender={renderedIndices.has(entryIndex)}
+                    windowWidth={windowWidth}
+                    onPageLayout={onPageLayout}
+                    day={progressDay}
+                    stats={props.stats}
+                    history={props.history}
+                    otherStates={otherStates}
+                    program={props.program}
+                    programDay={props.programDay}
+                    progressId={progressId}
+                    progressStartTime={progressStartTime}
+                    userPromptedStateVars={progressUserPromptedStateVars}
+                    supersetEntry={supersetByEntryId.get(entry.id)}
+                    prevData={prevExerciseData[Exercise_toKey(entry.exercise)]}
+                    isCurrentProgress={isCurrentProgress}
+                    helps={props.helps}
+                    subscription={props.subscription}
+                    settings={props.settings}
+                    dispatch={dispatch}
+                  />
+                ))}
+              </WorkoutExercisePager>
+            </PerfProbeSubtree>
           </View>
         )}
       </View>
@@ -359,7 +363,7 @@ function WorkoutHeaderInner(props: IWorkoutHeaderProps): JSX.Element {
   const [isFinishing, setIsFinishing] = useState(false);
 
   const onFinish = async (): Promise<void> => {
-    const isFullyFinished = isCurrent && Progress_isFullyFinishedSet(props.progress);
+    const isFullyFinished = isCurrent && Progress_isFullyEmptyOrFinishedSet(props.progress);
     if (!isFullyFinished) {
       const confirmed = await Dialog_confirm(
         isCurrent
@@ -396,7 +400,7 @@ function WorkoutHeaderInner(props: IWorkoutHeaderProps): JSX.Element {
           calories: History_calories(props.progress),
           intervals: JSON.stringify(intervals),
         });
-        const watchSaved = shouldSyncToHealth ? await NativeWatchBridge_sendFinishWorkoutToWatch() : false;
+        const watchSaved = await NativeWatchBridge_sendFinishWorkoutToWatch(!!shouldSyncToHealth);
         NativeWorkoutMirroring_resetWatchWorkoutState();
         if (shouldSyncToHealth && !watchSaved) {
           const validIntervals = intervals.filter((i): i is [number, number] => i[1] != null);
@@ -554,12 +558,13 @@ interface IWorkoutThumbnailsStripProps {
 
 function WorkoutThumbnailsStripInner(props: IWorkoutThumbnailsStripProps): JSX.Element {
   usePerfRenderCount("WorkoutThumbnailsStrip");
+  const trackClick = useTrackClick();
   const { enableReorder, onClick, dispatch } = props;
   const progressId = props.progress.id;
   const colorToSupersetGroup = useEqual(
     useMemo(() => Progress_getColorToSupersetGroup(props.progress), [props.progress])
   );
-  const currentEntryIndex = props.progress.ui?.currentEntryIndex ?? 0;
+  const currentEntryIndex = props.progress.currentEntryIndex ?? 0;
   const currentSuperset = props.progress.entries[currentEntryIndex]?.superset;
   const thumbScrollerRef = useRef<IScrollerHandle>(null);
   const prevEntriesLengthRef = useRef(props.progress.entries.length);
@@ -573,6 +578,7 @@ function WorkoutThumbnailsStripInner(props: IWorkoutThumbnailsStripProps): JSX.E
   }, [props.progress.entries.length]);
 
   const onAddExercise = useCallback(() => {
+    trackClick("workout-add-exercise-button");
     updateState(
       dispatch,
       [
@@ -591,10 +597,14 @@ function WorkoutThumbnailsStripInner(props: IWorkoutThumbnailsStripProps): JSX.E
       ],
       "Open exercise picker"
     );
-  }, [dispatch, progressId]);
+  }, [dispatch, progressId, trackClick]);
 
   const onDragEnd = useCallback(
     (startIndex: number, endIndex: number) => {
+      // DraggableList2 fires onDragEnd even for no-op drags (release in place), which shouldn't count.
+      if (startIndex !== endIndex) {
+        trackClick("workout-reorder-drag");
+      }
       updateProgress(
         dispatch,
         [
@@ -616,7 +626,7 @@ function WorkoutThumbnailsStripInner(props: IWorkoutThumbnailsStripProps): JSX.E
         onClick(endIndex);
       }, 0);
     },
-    [dispatch, onClick]
+    [dispatch, onClick, trackClick]
   );
   return (
     <View collapsable={false} className="py-1 border-b bg-background-default border-background-subtle">

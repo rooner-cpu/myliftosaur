@@ -71,6 +71,14 @@ import UserNotifications
       content.sound = UNNotificationSound(named: UNNotificationSoundName("notification.caf"))
     }
 
+    // UNTimeIntervalNotificationTrigger aborts the process on a non-positive interval, so an already-expired
+    // timer has nothing to schedule.
+    guard duration > 0 else {
+      NSLog("[LftTimer] iOS schedule skipped, duration=%.1f already elapsed", duration)
+      completion(true, nil)
+      return
+    }
+
     let trigger = UNTimeIntervalNotificationTrigger(timeInterval: duration, repeats: false)
     let request = UNNotificationRequest(identifier: timerIdentifier, content: content, trigger: trigger)
     center.add(request) { error in
@@ -140,14 +148,15 @@ import UserNotifications
     center.removePendingNotificationRequests(withIdentifiers: [reminderIdentifier])
   }
 
-  @objc func playSound(volume: Double, vibration: Bool) {
+  @objc func playSound(volume: Double, vibration: Bool, sound: String) {
     DispatchQueue.main.async {
       guard UIApplication.shared.applicationState == .active else { return }
       if vibration {
         AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
       }
       if volume <= 0 { return }
-      guard let url = Bundle.main.url(forResource: "notification", withExtension: "m4r") else { return }
+      let resource = sound.isEmpty ? "notification" : sound
+      guard let url = Bundle.main.url(forResource: resource, withExtension: "m4r") else { return }
       do {
         // .playback (not .ambient) so the cue grabs the active output route and is audible over a
         // podcast playing on Bluetooth/AirPods; .duckOthers lowers it briefly, restored on deactivation.

@@ -1,5 +1,13 @@
 import { Platform } from "react-native";
-import { IStorage, IHistoryRecord, ISettings, IUnit, IMuscleGeneratorResponse, IPlannerProgramWeek } from "../types";
+import {
+  IStorage,
+  IHistoryRecord,
+  ISettings,
+  IUnit,
+  IMuscleGeneratorResponse,
+  IPlannerProgramWeek,
+  IAffiliateData,
+} from "../types";
 import { IAccount } from "../models/account";
 import { IEither } from "../utils/types";
 import { UrlUtils_build } from "../utils/url";
@@ -28,6 +36,11 @@ export interface IProgramDetail {
     weeks: IPlannerProgramWeek[];
   };
 }
+
+export type IEmailAuthResponse =
+  | { type: "success"; response: IGetStorageResponse }
+  | { type: "confirmation_sent" }
+  | { type: "error"; error: string; providers?: string[] };
 
 export interface IGetStorageResponse {
   email: string;
@@ -127,6 +140,20 @@ export type IEventPayload =
       commithash: string;
       isMobile?: boolean;
       update: string;
+    }
+  | {
+      type: "log";
+      userId?: string;
+      timestamp: number;
+      action: string;
+      detail?: string;
+      affiliates?: Partial<Record<string, IAffiliateData>>;
+      subscriptions: string[];
+      referrer?: string;
+      landingPage?: string;
+      platform: { name: string; version?: string };
+      commithash: string;
+      isMobile?: boolean;
     };
 
 const cachePromises: Partial<Record<string, unknown>> = {};
@@ -268,6 +295,123 @@ export class Service {
     };
   }
 
+  public async emailSignUp(email: string, password: string, id: string): Promise<IEmailAuthResponse> {
+    return this.emailAuth(`${__API_HOST__}/api/signup/email`, { email, password, id });
+  }
+
+  public async emailSignIn(email: string, password: string, id: string): Promise<IEmailAuthResponse> {
+    return this.emailAuth(`${__API_HOST__}/api/signin/email`, { email, password, id });
+  }
+
+  private async emailAuth(url: string, body: Record<string, string>): Promise<IEmailAuthResponse> {
+    const historylimit = 20;
+    let response: Response;
+    let json: IGetStorageResponse & { status?: string; error?: string; providers?: string[] };
+    try {
+      response = await this.client(url, {
+        method: "POST",
+        body: JSON.stringify({ ...body, historylimit }),
+        credentials: "include",
+        headers: Service_nativeClientHeaders(),
+      });
+      json = await response.json();
+    } catch (e) {
+      return { type: "error", error: "network_error" };
+    }
+    if (!response.ok) {
+      return { type: "error", error: json.error || "unknown_error", providers: json.providers };
+    }
+    if (json.status === "confirmation_sent") {
+      return { type: "confirmation_sent" };
+    }
+    json.storage.history = await this.getAllHistoryRecords({
+      alreadyFetchedHistory: json.storage.history,
+      historyLimit: historylimit,
+    });
+    return {
+      type: "success",
+      response: {
+        email: json.email,
+        storage: json.storage,
+        user_id: json.user_id,
+        is_new_user: json.is_new_user,
+        session: json.session,
+      },
+    };
+  }
+
+  public async forgotPassword(email: string): Promise<{ error?: string; providers?: string[] }> {
+    try {
+      const response = await this.client(`${__API_HOST__}/api/auth/forgotpassword`, {
+        method: "POST",
+        body: JSON.stringify({ email }),
+        credentials: "include",
+        headers: Service_nativeClientHeaders(),
+      });
+      if (response.ok) {
+        return {};
+      }
+      const json = await response.json().catch(() => ({}));
+      return { error: json.error || "unknown_error", providers: json.providers };
+    } catch (e) {
+      return { error: "network_error" };
+    }
+  }
+
+  public async resetPassword(token: string, password: string): Promise<{ error?: string }> {
+    try {
+      const response = await this.client(`${__API_HOST__}/api/auth/resetpassword`, {
+        method: "POST",
+        body: JSON.stringify({ token, password }),
+        credentials: "include",
+        headers: Service_nativeClientHeaders(),
+      });
+      if (response.ok) {
+        return {};
+      }
+      const json = await response.json().catch(() => ({}));
+      return { error: json.error || "unknown_error" };
+    } catch (e) {
+      return { error: "network_error" };
+    }
+  }
+
+  public async verifyEmail(token: string): Promise<{ error?: string }> {
+    try {
+      const response = await this.client(`${__API_HOST__}/api/auth/verifyemail`, {
+        method: "POST",
+        body: JSON.stringify({ token }),
+        credentials: "include",
+        headers: Service_nativeClientHeaders(),
+      });
+      if (response.ok) {
+        return {};
+      }
+      const json = await response.json().catch(() => ({}));
+      return { error: json.error || "unknown_error" };
+    } catch (e) {
+      return { error: "network_error" };
+    }
+  }
+
+  public async changePassword(currentPassword: string | undefined, newPassword: string): Promise<string | undefined> {
+    try {
+      const response = await this.client(`${__API_HOST__}/api/auth/changepassword`, {
+        method: "POST",
+        body: JSON.stringify({ currentPassword, newPassword }),
+        credentials: "include",
+        headers: Service_nativeClientHeaders(),
+      });
+      if (response.ok) {
+        return undefined;
+      }
+      const json = await response.json().catch(() => ({}));
+      return json.error || "unknown_error";
+    } catch (e) {
+      return "network_error";
+    }
+  }
+
   public async signout(): Promise<void> {
     await this.client(`${__API_HOST__}/api/signout`, {
       method: "POST",
@@ -358,6 +502,43 @@ export class Service {
       });
     }
     return json;
+  }
+
+  public async createDebugSession(
+    userId: string,
+    adminKey: string
+  ): Promise<{ session?: string; userId: string; email: string } | undefined> {
+    const url = UrlUtils_build(`${__API_HOST__}/api/admin/debugsession`);
+    url.searchParams.set("userid", userId);
+    url.searchParams.set("key", adminKey);
+    const response = await this.client(url.toString(), {
+      method: "POST",
+      body: JSON.stringify({}),
+      credentials: "include",
+    });
+    if (response.status !== 200) {
+      return undefined;
+    }
+    return response.json();
+  }
+
+  public async postSetupTestAccount(apiKey?: string, session?: string): Promise<{ apiKeyBound: boolean; key: string }> {
+    const response = await this.client(`${__API_HOST__}/api/dev/setuptestaccount`, {
+      method: "POST",
+      body: JSON.stringify({ apiKey }),
+      credentials: "include",
+      headers: {
+        ...Service_nativeClientHeaders(),
+        ...(session ? { authorization: `Bearer ${session}` } : {}),
+      },
+    });
+    const json: { data?: { apiKeyBound: boolean; key: string }; error?: string } = await response
+      .json()
+      .catch(() => ({}));
+    if (response.status !== 200 || json.data == null) {
+      throw new Error(`Test account setup failed (${response.status}): ${json.error || "unknown error"}`);
+    }
+    return json.data;
   }
 
   public async postDebug(id: string, state: string, meta: Record<string, string>): Promise<boolean> {
@@ -659,6 +840,29 @@ export class Service {
       }
     });
     return !!(json as { result: boolean }).result;
+  }
+
+  public async verifySubscriptionKey(userId: string, key: string): Promise<{ clear: boolean }> {
+    try {
+      const url = UrlUtils_build(`${__API_HOST__}/api/verifysubscriptionkey`);
+      // The server only verifies keys outside of prod when `enforce` is set — tests rely on it
+      const enforce =
+        typeof window !== "undefined" && window.location?.href
+          ? !!UrlUtils_build(window.location.href).searchParams.get("enforce")
+          : false;
+      const result = await this.client(url.toString(), {
+        method: "POST",
+        body: JSON.stringify({ user: userId, key, enforce }),
+        credentials: "include",
+      });
+      if (result.status !== 200) {
+        return { clear: false };
+      }
+      const json = (await result.json()) as { data?: { clear?: boolean } };
+      return { clear: !!json.data?.clear };
+    } catch {
+      return { clear: false };
+    }
   }
 
   public async deleteAccount(): Promise<boolean> {

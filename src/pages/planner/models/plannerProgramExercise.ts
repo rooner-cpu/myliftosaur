@@ -5,6 +5,7 @@ import {
   IPlannerProgramExerciseGlobals,
   IPlannerProgramExerciseSet,
   IPlannerProgramExerciseSetVariation,
+  IPlannerProgramExerciseVariation,
   IPlannerProgramExerciseWithType,
   IPlannerProgramExerciseWarmupSet,
   IProgramExerciseProgress,
@@ -166,6 +167,9 @@ export function PlannerProgramExercise_evaluateSetVariations(
           minrep: aSet.repRange.minrep,
           weight: aSet.weight ? aSet.weight : aSet.percentage ? Weight_buildPct(aSet.percentage) : undefined,
           timer: aSet.timer,
+          setTimer: aSet.setTimer,
+          isOverflowSetTimer: aSet.isOverflowSetTimer,
+          auto: aSet.auto,
           rpe: aSet.rpe,
           logRpe: !!aSet.logRpe,
           label: aSet.label,
@@ -198,6 +202,14 @@ export function PlannerProgramExercise_sets(
     const set: IPlannerProgramExerciseSet = ObjectUtils_clone(aSet);
     set.rpe = currentGlobals.rpe != null ? currentGlobals.rpe : (set.rpe ?? reusedGlobals.rpe);
     set.timer = currentGlobals.timer != null ? currentGlobals.timer : (set.timer ?? reusedGlobals.timer);
+    set.setTimer = currentGlobals.setTimer != null ? currentGlobals.setTimer : (set.setTimer ?? reusedGlobals.setTimer);
+    // The overflow `+` modifier is part of the set timer, so a global/override that sets the set timer
+    // also dictates the overflow flag (absent `+` means off) - it must not leak from the reused exercise.
+    set.isOverflowSetTimer =
+      currentGlobals.setTimer != null
+        ? !!currentGlobals.isOverflowSetTimer
+        : (set.isOverflowSetTimer ?? reusedGlobals.isOverflowSetTimer);
+    set.auto = currentGlobals.auto != null ? currentGlobals.auto : (set.auto ?? reusedGlobals.auto);
     if (currentGlobals.weight != null || currentGlobals.percentage != null) {
       if (currentGlobals.weight != null) {
         set.weight = currentGlobals.weight;
@@ -288,7 +300,7 @@ export function PlannerProgramExercise_uniqueKey(exercise: IPlannerProgramExerci
 }
 
 export function PlannerProgramExercise_uniqueSetKey(set: IPlannerProgramExerciseEvaluatedSet): string {
-  return `${set.minrep}-${set.maxrep}-${set.isAmrap}-${set.weight?.value}${set.weight?.unit}${set.askWeight}-${set.rpe}${set.logRpe}-${set.timer}`;
+  return `${set.minrep}-${set.maxrep}-${set.isAmrap}-${set.weight?.value}${set.weight?.unit}${set.askWeight}-${set.rpe}${set.logRpe}-${set.timer}-${set.setTimer}${set.isOverflowSetTimer}${set.auto}`;
 }
 
 export function PlannerProgramExercise_evaluatedSetsToDisplaySets(
@@ -310,6 +322,9 @@ export function PlannerProgramExercise_evaluatedSetsToDisplaySets(
       unit,
       askWeight: set.askWeight,
       timer: set.timer,
+      setTimer: set.setTimer,
+      isOverflowSetTimer: set.isOverflowSetTimer,
+      auto: set.auto,
     });
   }
   return Reps_groupDisplaySets(displaySets);
@@ -344,6 +359,9 @@ export function PlannerProgramExercise_setsToDisplaySets(
         unit,
         askWeight: set.askWeight,
         timer: set.timer,
+        setTimer: set.setTimer,
+        isOverflowSetTimer: set.isOverflowSetTimer,
+        auto: set.auto,
       });
     }
   }
@@ -379,6 +397,18 @@ export function PlannerProgramExercise_currentEvaluatedSetVariation(
   return exercise.evaluatedSetVariations[index];
 }
 
+export function PlannerProgramExercise_currentExerciseVariationIndex(exercise: IPlannerProgramExercise): number {
+  const index = (exercise.exerciseVariations ?? []).findIndex((v) => v.isCurrent);
+  return index === -1 ? 0 : index;
+}
+
+export function PlannerProgramExercise_currentExerciseVariation(
+  exercise: IPlannerProgramExercise
+): IPlannerProgramExerciseVariation | undefined {
+  const index = PlannerProgramExercise_currentExerciseVariationIndex(exercise);
+  return exercise.exerciseVariations?.[index];
+}
+
 export function PlannerProgramExercise_currentDescription(exercise: IPlannerProgramExercise): string | undefined {
   const index = PlannerProgramExercise_currentDescriptionIndex(exercise);
   return exercise.descriptions.values[index]?.value;
@@ -407,6 +437,9 @@ export function PlannerProgramExercise_addSet(
         askWeight: lastSet.askWeight || false,
         rpe: lastSet.rpe,
         timer: lastSet.timer,
+        setTimer: lastSet.setTimer,
+        isOverflowSetTimer: lastSet.isOverflowSetTimer,
+        auto: lastSet.auto,
         label: lastSet.label,
       };
       evaluatedSetVariation.sets = [...evaluatedSetVariation.sets, ObjectUtils_clone(lastEvaluatedSet)];
@@ -811,6 +844,9 @@ export function PlannerProgramExercise_createExerciseFromEntry(
           isQuickAddSet: false,
         },
         timer: set.timer,
+        setTimer: set.setTimer,
+        isOverflowSetTimer: set.isOverflowSetTimer,
+        auto: set.auto,
         rpe: set.rpe,
         logRpe: set.logRpe,
         percentage: Weight_isPct(set.originalWeight) ? set.originalWeight.value : undefined,
@@ -844,6 +880,7 @@ export function PlannerProgramExercise_createExerciseFromEntry(
     line: 1,
     evaluatedSetVariations: [],
     setVariations: setVariations,
+    exerciseVariations: [{ exerciseType, name, isCurrent: true }],
     warmupSets: groupedWarmupSets.map((group) => ({
       type: "warmup",
       numberOfSets: group.length,

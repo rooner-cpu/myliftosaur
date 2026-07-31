@@ -41,6 +41,7 @@ import { IEither } from "../../../utils/types";
 import { getLatestMigrationVersion } from "../../../migrations/migrations";
 import { ProgramToPlanner } from "../../../models/programToPlanner";
 import { PlannerKey_fromLabelNameAndEquipment, PlannerKey_fromExerciseType } from "../plannerKey";
+import { Exercise_get } from "../../../models/exercise";
 import { UidFactory_generateUid } from "../../../utils/generator";
 import { CollectionUtils_compact } from "../../../utils/collection";
 
@@ -138,6 +139,11 @@ export function PlannerProgram_replaceExercise(
         exercise.exerciseType = typeof toExerciseType === "string" ? undefined : toExerciseType;
         const newLabel2 = getLabel(exercise.label);
         exercise.label = newLabel2;
+        // Replacing collapses any multi-variation ladder into a single current variation for the new
+        // target, so serialization/identity come from the new exercise instead of the stale ladder.
+        const newName =
+          typeof toExerciseType === "string" ? toExerciseType : Exercise_get(toExerciseType, settings.exercises).name;
+        exercise.exerciseVariations = [{ exerciseType: exercise.exerciseType, name: newName, isCurrent: true }];
         if (typeof toExerciseType === "string") {
           exercise.notused = true;
           exercise.fullName = `${newLabel2 ? `${newLabel2}: ` : ""}${toExerciseType}`;
@@ -480,11 +486,15 @@ export function PlannerProgram_groupedTopLines(topLine: IPlannerTopLineItem[][][
         if (ex1 == null || ex2 == null) {
           return 0;
         }
-        if (ex1.exerciseIndex === ex2.exerciseIndex) {
-          return (ex1.repeat?.[0] ?? 0) - (ex2.repeat?.[0] ?? 0);
-        } else {
+        if ((ex1.exerciseIndex ?? 0) !== (ex2.exerciseIndex ?? 0)) {
           return (ex1.exerciseIndex ?? 0) - (ex2.exerciseIndex ?? 0);
         }
+        // A repeat-materialized copy (appended at the end of the day) shares exerciseIndex with
+        // the used exercise that follows the original in the source week, so it goes before that
+        // exercise to match the source week's position. Other ties (used: none templates before
+        // the used exercise that shares their exerciseIndex) keep document order - the sort is
+        // stable.
+        return (ex1.isRepeat ? 0 : 1) - (ex2.isRepeat ? 0 : 1);
       });
     }
   }
@@ -526,7 +536,7 @@ export function PlannerProgram_topLineItems(
                 reuseDay.push({ type: "description", value: exercise.descriptions[di] });
               }
             }
-            reuseDay.push({ ...exercise, repeat: undefined });
+            reuseDay.push({ ...exercise, repeat: undefined, isRepeat: true });
           }
         }
       }

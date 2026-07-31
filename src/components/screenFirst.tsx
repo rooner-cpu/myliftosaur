@@ -26,6 +26,7 @@ const onboardingImages = [
   "/images/dinoequipment.png",
   "/images/dinoplates.png",
   "/images/dinoprogramselect.png",
+  "/images/dino-scope.png",
 ];
 
 export function ScreenFirst(props: IProps): JSX.Element {
@@ -101,7 +102,7 @@ export function ScreenFirst(props: IProps): JSX.Element {
       </View>
       <View className="pb-6 mx-4">
         <Button
-          className="w-full"
+          className="w-full ls-onboarding-start"
           name="see-how-it-works"
           kind="purple"
           onClick={() => props.dispatch(Thunk_pushScreen("units"))}
@@ -113,7 +114,7 @@ export function ScreenFirst(props: IProps): JSX.Element {
         </Button>
         <View className="pb-4 mt-2">
           <Button
-            className="w-full"
+            className="w-full ls-onboarding-have-account"
             name="see-how-it-works"
             kind="transparent-purple"
             onClick={() => navigateToModal("accountModal")}

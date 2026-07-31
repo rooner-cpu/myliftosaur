@@ -5,12 +5,12 @@ import { useAppContext } from "../../components/appContext";
 import { ModalScreenContainer } from "../ModalScreenContainer";
 import { FormSheet } from "../FormSheet";
 import { Account } from "../../components/account";
+import { navigateToModal } from "../navigationService";
 import { Account_getFromStorage } from "../../models/account";
 import { IState } from "../../models/state";
 import { Thunk_pushScreen } from "../../ducks/thunks";
 import { Standalone_localMode } from "../../config/standalone";
 import { VmrAccountPanel } from "../../components/vmrAccountPanel";
-import { Text } from "../../components/primitives/text";
 
 export function NavModalAccount(): JSX.Element {
   const { state, dispatch } = useAppState();
@@ -35,15 +35,17 @@ export function NavModalAccount(): JSX.Element {
     <ModalScreenContainer onClose={onClose} shouldShowClose={true}>
       <FormSheet>
         {Standalone_localMode ? (
-          <>
-            <Text className="mb-4 text-lg font-bold text-center">VMR-Lift Account</Text>
-            <VmrAccountPanel />
-          </>
+          <VmrAccountPanel />
         ) : (
-          <Account account={account} client={service.client} dispatch={dispatch} onSignIn={onSignIn} />
+          <Account
+            account={account}
+            client={service.client}
+            dispatch={dispatch}
+            onSignIn={onSignIn}
+            onOpenEmailAuth={() => navigateToModal("emailAuthModal")}
+          />
         )}
       </FormSheet>
     </ModalScreenContainer>
   );
 }
-

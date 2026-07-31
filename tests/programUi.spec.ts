@@ -12,7 +12,7 @@ import {
 
 test("Warmups", async ({ page }) => {
   await page.goto(startpage + "?skipintro=1");
-  PlaywrightUtils_disableTours(page);
+  await PlaywrightUtils_disableTours(page);
   await PlaywrightUtils_createProgram(page, "My Program");
 
   await page.getByTestId("tab-edit").click();
@@ -58,7 +58,7 @@ test("Warmups", async ({ page }) => {
 
 test("Sets", async ({ page }) => {
   await page.goto(startpage + "?skipintro=1");
-  PlaywrightUtils_disableTours(page);
+  await PlaywrightUtils_disableTours(page);
   await PlaywrightUtils_createProgram(page, "My Program");
   await page.getByTestId("tab-edit").click();
   await page.getByTestId("add-exercise").click();
@@ -94,7 +94,7 @@ test("Sets", async ({ page }) => {
   await PlaywrightUtils_swipeLeft(page, page.getByTestId("set-x").nth(4));
   await page.getByTestId("edit-set").nth(4).click();
   await page.getByTestId("menu-item-name-rpe").click();
-  await page.getByTestId("menu-item-name-timer").click();
+  await page.getByTestId("menu-item-name-rest").click();
   await page.getByTestId("bottom-sheet-close").and(page.locator(":visible")).click();
 
   await PlaywrightUtils_typeKeyboard(page, page.getByTestId("input-timer-value-field"), "150");
@@ -116,7 +116,7 @@ test("Sets", async ({ page }) => {
 
 test("Change exercise", async ({ page }) => {
   await page.goto(startpage + "?skipintro=1");
-  PlaywrightUtils_disableTours(page);
+  await PlaywrightUtils_disableTours(page);
   await PlaywrightUtils_createProgram(page, "My Program");
   await page.getByTestId("tab-edit").click();
   await page.getByTestId("add-exercise").click();
@@ -149,7 +149,7 @@ test("Change exercise", async ({ page }) => {
 
 test("Reuse without overwrite", async ({ page }) => {
   await page.goto(startpage + "?skipintro=1");
-  PlaywrightUtils_disableTours(page);
+  await PlaywrightUtils_disableTours(page);
   await PlaywrightUtils_createProgram(page, "My Program");
   await page.getByTestId("tab-edit").click();
   await page.getByTestId("editor-v2-full-program").click();
@@ -200,7 +200,7 @@ Squat / 3x8 60lb / warmup: 1x5 45lb, 1x3 135lb / progress: custom() {~ weights +
 
 test("Reuse progresses", async ({ page }) => {
   await page.goto(startpage + "?skipintro=1");
-  PlaywrightUtils_disableTours(page);
+  await PlaywrightUtils_disableTours(page);
   await PlaywrightUtils_createProgram(page, "My Program");
   await page.getByTestId("tab-edit").click();
   await page.getByTestId("editor-v2-full-program").click();

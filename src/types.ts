@@ -278,6 +278,7 @@ export const statsLengthDef = [
   "calfRight",
 ] as const;
 export const statsPercentageDef = ["bodyfat"] as const;
+export const statsHealthDef = ["sleep", "calories", "protein"] as const;
 
 export const VUnit = v.picklist(units);
 export type IUnit = v.InferOutput<typeof VUnit>;
@@ -469,6 +470,9 @@ export interface ISet {
   isAmrap?: boolean;
   label?: string;
   timer?: number;
+  setTimer?: number;
+  isOverflowSetTimer?: boolean;
+  auto?: boolean;
   askWeight?: boolean;
   isCompleted?: boolean;
   isUnilateral?: boolean;
@@ -476,6 +480,7 @@ export interface ISet {
   completedReps?: number;
   completedWeight?: IWeight;
   completedRpe?: number;
+  completedSetTimer?: number;
   programSetIndex?: number;
 }
 const _VSet = v.object({
@@ -492,6 +497,9 @@ const _VSet = v.object({
   isAmrap: v.optional(v.boolean()),
   label: v.optional(v.string()),
   timer: v.optional(v.number()),
+  setTimer: v.optional(v.number()),
+  isOverflowSetTimer: v.optional(v.boolean()),
+  auto: v.optional(v.boolean()),
   askWeight: v.optional(v.boolean()),
   isCompleted: v.optional(v.boolean()),
   isUnilateral: v.optional(v.boolean()),
@@ -499,6 +507,7 @@ const _VSet = v.object({
   completedReps: v.optional(v.number()),
   completedWeight: v.optional(VWeight),
   completedRpe: v.optional(v.number()),
+  completedSetTimer: v.optional(v.number()),
   programSetIndex: v.optional(v.number()),
 });
 const _VSetMatches: IEquals<v.InferOutput<typeof _VSet>, ISet> = true;
@@ -805,6 +814,8 @@ export interface IExercisePickerState {
   search?: string;
   exerciseType?: IExerciseType;
   entryIndex?: number;
+  hideLabel?: boolean;
+  hideTemplate?: boolean;
 }
 const _VExercisePickerState = v.object({
   screenStack: v.array(VExercisePickerScreen),
@@ -821,6 +832,8 @@ const _VExercisePickerState = v.object({
   search: v.optional(v.string()),
   exerciseType: v.optional(VExerciseType),
   entryIndex: v.optional(v.number()),
+  hideLabel: v.optional(v.boolean()),
+  hideTemplate: v.optional(v.boolean()),
 });
 const _VExercisePickerStateMatches: IEquals<v.InferOutput<typeof _VExercisePickerState>, IExercisePickerState> = true;
 void _VExercisePickerStateMatches;
@@ -829,15 +842,6 @@ export const VExercisePickerState: v.GenericSchema<IExercisePickerState> = _VExe
 export interface IProgressUi {
   vtype?: "progress_ui";
   id?: string;
-  amrapModal?: {
-    entryIndex: number;
-    setIndex: number;
-    isAmrap?: boolean;
-    logRpe?: boolean;
-    askWeight?: boolean;
-    userVars?: boolean;
-    nonce?: number;
-  };
   editModal?: {
     programExerciseId: string;
     entryIndex: number;
@@ -863,11 +867,18 @@ export interface IProgressUi {
     set: ISet;
     setIndex?: number;
   };
+  setTimerEditModal?: {
+    entryIndex: number;
+    setIndex: number;
+  };
+  roundingModal?: {
+    entryIndex: number;
+    setIndex: number;
+  };
   exerciseBottomSheet?: {
     entryIndex: number;
   };
   entryIndexEditMode?: number;
-  currentEntryIndex?: number;
   showSupersetPicker?: IHistoryEntry;
   forceUpdateEntryIndex?: boolean;
   isExternal?: boolean;
@@ -876,17 +887,6 @@ export interface IProgressUi {
 const _VProgressUi = v.object({
   vtype: v.optional(v.literal("progress_ui")),
   id: v.optional(v.string()),
-  amrapModal: v.optional(
-    v.object({
-      entryIndex: v.number(),
-      setIndex: v.number(),
-      isAmrap: v.optional(v.boolean()),
-      logRpe: v.optional(v.boolean()),
-      askWeight: v.optional(v.boolean()),
-      userVars: v.optional(v.boolean()),
-      nonce: v.optional(v.number()),
-    })
-  ),
   editModal: v.optional(
     v.object({
       programExerciseId: v.string(),
@@ -924,13 +924,24 @@ const _VProgressUi = v.object({
       setIndex: v.optional(v.number()),
     })
   ),
+  setTimerEditModal: v.optional(
+    v.object({
+      entryIndex: v.number(),
+      setIndex: v.number(),
+    })
+  ),
+  roundingModal: v.optional(
+    v.object({
+      entryIndex: v.number(),
+      setIndex: v.number(),
+    })
+  ),
   exerciseBottomSheet: v.optional(
     v.object({
       entryIndex: v.number(),
     })
   ),
   entryIndexEditMode: v.optional(v.number()),
-  currentEntryIndex: v.optional(v.number()),
   showSupersetPicker: v.optional(v.lazy(() => VHistoryEntry)),
   forceUpdateEntryIndex: v.optional(v.boolean()),
   isExternal: v.optional(v.boolean()),
@@ -966,6 +977,31 @@ export interface IHistoryRecord {
   timer?: number;
   timerEntryIndex?: number;
   timerSetIndex?: number;
+  // The running clock for a time-based set. Lives on the record (not under `ui`) so it's version-tracked
+  // and syncs across devices like the rest timer — a clock started on the watch shows in the app and vice
+  // versa. `nonce` drives re-presenting the modal; `keepTiming` survives the AMRAP resolution.
+  setTimer?: {
+    entryIndex: number;
+    setIndex: number;
+    startedAt: number;
+    nonce?: number;
+    keepTiming?: boolean;
+  };
+  // Lives on the record (not under `ui`) so it's version-tracked and syncs across devices like setTimer — an
+  // AMRAP prompt opened on the watch shows in the app and vice versa, and resolving it on either device
+  // dismisses it on both. `nonce` drives re-presenting the modal.
+  amrapModal?: {
+    entryIndex: number;
+    setIndex: number;
+    isAmrap?: boolean;
+    logRpe?: boolean;
+    askWeight?: boolean;
+    userVars?: boolean;
+    nonce?: number;
+  };
+  // The exercise the workout screen is scrolled to. Lives on the record (not under `ui`) so it version-syncs
+  // across devices — auto-advancing past an exercise (EMOM/Tabata) on one client moves the others too.
+  currentEntryIndex?: number;
   notes?: string;
   updatedAt?: number;
 }
@@ -992,6 +1028,27 @@ const _VHistoryRecord = v.object({
   timer: v.optional(v.number()),
   timerEntryIndex: v.optional(v.number()),
   timerSetIndex: v.optional(v.number()),
+  setTimer: v.optional(
+    v.object({
+      entryIndex: v.number(),
+      setIndex: v.number(),
+      startedAt: v.number(),
+      nonce: v.optional(v.number()),
+      keepTiming: v.optional(v.boolean()),
+    })
+  ),
+  amrapModal: v.optional(
+    v.object({
+      entryIndex: v.number(),
+      setIndex: v.number(),
+      isAmrap: v.optional(v.boolean()),
+      logRpe: v.optional(v.boolean()),
+      askWeight: v.optional(v.boolean()),
+      userVars: v.optional(v.boolean()),
+      nonce: v.optional(v.number()),
+    })
+  ),
+  currentEntryIndex: v.optional(v.number()),
   notes: v.optional(v.string()),
   updatedAt: v.optional(v.number()),
 });
@@ -1145,6 +1202,7 @@ export interface IStatsWeightValue {
   timestamp: number;
   updatedAt?: number;
   appleUuid?: string;
+  googleUuid?: string;
 }
 const _VStatsWeightValue = v.object({
   vtype: v.literal("stat"),
@@ -1152,6 +1210,7 @@ const _VStatsWeightValue = v.object({
   timestamp: v.number(),
   updatedAt: v.optional(v.number()),
   appleUuid: v.optional(v.string()),
+  googleUuid: v.optional(v.string()),
 });
 const _VStatsWeightValueMatches: IEquals<v.InferOutput<typeof _VStatsWeightValue>, IStatsWeightValue> = true;
 void _VStatsWeightValueMatches;
@@ -1168,6 +1227,7 @@ export interface IStatsLengthValue {
   timestamp: number;
   updatedAt?: number;
   appleUuid?: string;
+  googleUuid?: string;
 }
 const _VStatsLengthValue = v.object({
   vtype: v.literal("stat"),
@@ -1175,6 +1235,7 @@ const _VStatsLengthValue = v.object({
   timestamp: v.number(),
   updatedAt: v.optional(v.number()),
   appleUuid: v.optional(v.string()),
+  googleUuid: v.optional(v.string()),
 });
 const _VStatsLengthValueMatches: IEquals<v.InferOutput<typeof _VStatsLengthValue>, IStatsLengthValue> = true;
 void _VStatsLengthValueMatches;
@@ -1194,6 +1255,7 @@ export interface IStatsPercentageValue {
   timestamp: number;
   updatedAt?: number;
   appleUuid?: string;
+  googleUuid?: string;
 }
 const _VStatsPercentageValue = v.object({
   vtype: v.literal("stat"),
@@ -1201,6 +1263,7 @@ const _VStatsPercentageValue = v.object({
   timestamp: v.number(),
   updatedAt: v.optional(v.number()),
   appleUuid: v.optional(v.string()),
+  googleUuid: v.optional(v.string()),
 });
 const _VStatsPercentageValueMatches: IEquals<
   v.InferOutput<typeof _VStatsPercentageValue>,
@@ -1213,6 +1276,43 @@ export const VStatsPercentage = v.object({
   bodyfat: v.optional(v.array(VStatsPercentageValue)),
 });
 export type IStatsPercentage = v.InferOutput<typeof VStatsPercentage>;
+
+// Read-only daily metrics imported from Apple Health / Health Connect (sleep minutes, dietary
+// calories, protein grams). Unlike body measurements these are daily aggregates, keyed by the
+// local-midnight timestamp of the day they belong to; the value is a plain number whose unit is
+// implied by the key.
+export interface IStatsHealthValue {
+  vtype: "stat";
+  value: number;
+  timestamp: number;
+  updatedAt?: number;
+  appleUuid?: string;
+  googleUuid?: string;
+  // Read-only imported records can't be truly deleted (they'd just re-sync), so the user hides them
+  // instead; the record stays in storage and re-syncs normally, it's just filtered out of the UI.
+  hidden?: boolean;
+}
+const _VStatsHealthValue = v.object({
+  vtype: v.literal("stat"),
+  value: v.number(),
+  timestamp: v.number(),
+  updatedAt: v.optional(v.number()),
+  appleUuid: v.optional(v.string()),
+  googleUuid: v.optional(v.string()),
+  hidden: v.optional(v.boolean()),
+});
+const _VStatsHealthValueMatches: IEquals<v.InferOutput<typeof _VStatsHealthValue>, IStatsHealthValue> = true;
+void _VStatsHealthValueMatches;
+export const VStatsHealthValue: v.GenericSchema<IStatsHealthValue> = _VStatsHealthValue;
+
+export type IStatsHealthKey = (typeof statsHealthDef)[number];
+export type IStatsHealth = Partial<Record<IStatsHealthKey, IStatsHealthValue[]>>;
+export const VStatsHealth: v.GenericSchema<IStatsHealth> = v.object(
+  statsHealthDef.reduce<Record<string, v.GenericSchema<IStatsHealthValue[] | undefined>>>((memo, key) => {
+    memo[key] = v.optional(v.array(VStatsHealthValue));
+    return memo;
+  }, {})
+);
 
 export type IStatsKey = keyof IStatsLength | keyof IStatsWeight | keyof IStatsPercentage;
 
@@ -1361,6 +1461,7 @@ export interface IExerciseDataValue {
   notes?: string;
   muscleMultipliers?: Record<string, number | undefined>;
   isUnilateral?: boolean;
+  volumeMultiplier?: number;
 }
 const _VExerciseDataValue = v.object({
   rm1: v.optional(VWeight),
@@ -1369,6 +1470,7 @@ const _VExerciseDataValue = v.object({
   notes: v.optional(v.string()),
   muscleMultipliers: v.optional(v.record(v.string(), v.optional(v.number()))),
   isUnilateral: v.optional(v.boolean()),
+  volumeMultiplier: v.optional(v.number()),
 });
 const _VExerciseDataValueMatches: IEquals<v.InferOutput<typeof _VExerciseDataValue>, IExerciseDataValue> = true;
 void _VExerciseDataValueMatches;
@@ -1493,9 +1595,11 @@ export interface ISettings {
   muscleGroups: IMuscleGroupsSettings;
   appleHealthSyncWorkout?: boolean;
   appleHealthSyncMeasurements?: boolean;
+  appleHealthSyncSleepNutrition?: boolean;
   appleHealthAnchor?: string;
   googleHealthSyncWorkout?: boolean;
   googleHealthSyncMeasurements?: boolean;
+  googleHealthSyncSleepNutrition?: boolean;
   googleHealthAnchor?: string;
   healthConfirmation?: boolean;
   ignoreDoNotDisturb?: boolean;
@@ -1541,9 +1645,11 @@ const _VSettings = v.object({
   muscleGroups: VMuscleGroupsSettings,
   appleHealthSyncWorkout: v.optional(v.boolean()),
   appleHealthSyncMeasurements: v.optional(v.boolean()),
+  appleHealthSyncSleepNutrition: v.optional(v.boolean()),
   appleHealthAnchor: v.optional(v.string()),
   googleHealthSyncWorkout: v.optional(v.boolean()),
   googleHealthSyncMeasurements: v.optional(v.boolean()),
+  googleHealthSyncSleepNutrition: v.optional(v.boolean()),
   googleHealthAnchor: v.optional(v.string()),
   healthConfirmation: v.optional(v.boolean()),
   ignoreDoNotDisturb: v.optional(v.boolean()),
@@ -1567,11 +1673,13 @@ export interface IStats {
   weight: IStatsWeight;
   length: IStatsLength;
   percentage: IStatsPercentage;
+  health?: IStatsHealth;
 }
 const _VStats = v.object({
   weight: VStatsWeight,
   length: VStatsLength,
   percentage: VStatsPercentage,
+  health: v.optional(VStatsHealth),
 });
 const _VStatsMatches: IEquals<v.InferOutput<typeof _VStats>, IStats> = true;
 void _VStatsMatches;
@@ -1645,6 +1753,32 @@ const _VImportSessionMatches: IEquals<v.InferOutput<typeof _VImportSession>, IIm
 void _VImportSessionMatches;
 export const VImportSession: v.GenericSchema<IImportSession> = _VImportSession;
 
+export interface IHearAboutUs {
+  result?: {
+    source: string;
+    detail?: string;
+    freeform?: string;
+    ts: number;
+  };
+  requests: number[];
+  done?: boolean;
+}
+const _VHearAboutUs = v.object({
+  result: v.optional(
+    v.object({
+      source: v.string(),
+      detail: v.optional(v.string()),
+      freeform: v.optional(v.string()),
+      ts: v.number(),
+    })
+  ),
+  requests: v.array(v.number()),
+  done: v.optional(v.boolean()),
+});
+const _VHearAboutUsMatches: IEquals<v.InferOutput<typeof _VHearAboutUs>, IHearAboutUs> = true;
+void _VHearAboutUsMatches;
+export const VHearAboutUs: v.GenericSchema<IHearAboutUs> = _VHearAboutUs;
+
 interface IStorageRaw {
   history: IHistoryRecord[];
   deletedHistory: number[];
@@ -1657,6 +1791,7 @@ interface IStorageRaw {
   deletedPrograms: number[];
   reviewRequests: number[];
   signupRequests: number[];
+  hearAboutUs?: IHearAboutUs;
   helps: string[];
   tempUserId: string;
   email?: string;
@@ -1687,6 +1822,7 @@ const _VStorage = v.object({
   deletedPrograms: v.array(v.number()),
   reviewRequests: v.array(v.number()),
   signupRequests: v.array(v.number()),
+  hearAboutUs: v.optional(_VHearAboutUs),
   helps: v.array(v.string()),
   tempUserId: v.string(),
   email: v.optional(v.string()),
@@ -1798,6 +1934,9 @@ export const CONTROLLED_FIELDS: Record<IControlledType, readonly string[]> = {
     "timer",
     "timerEntryIndex",
     "timerSetIndex",
+    "setTimer",
+    "amrapModal",
+    "currentEntryIndex",
   ] as const,
   history_entry: [
     "exercise",

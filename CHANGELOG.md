@@ -14,6 +14,94 @@
 -->
 
 ---
+date: 2026-07-19
+title: Added Sleep & Nutrition tracking
+---
+
+Liftosaur can now import your sleep duration, dietary calories, and protein from Apple Health or Google Health Connect. To turn it on, go to the Me screen, then scroll to "Apple Health" (or "Google Health Connect" on Android), and there enable "Sync Sleep & Nutrition".
+
+There's a new "Sleep & Nutrition" screen you can enter from the Me tab, with a trend graph and history for each metric. The import is read-only and happens on app open, daily aggregated. You can also soft-delete (hide) it from the list, and unhide if necessary.
+
+The data also syncs to your account like the rest of your measurements, so it's available through the [REST API](internal:/docs/api) and the [MCP server](internal:/docs/mcp) as a new `health` measurements category. So you can e.g. ask an AI assistant to correlate your sleep or protein intake with your training performance.
+
+You need an iOS/Android native app update (from App Store / Google Play) to get this feature.
+
+---
+date: 2026-07-17
+title: Tap a crossed-out weight to see why it was rounded
+---
+
+When a set's target shows a crossed-out weight next to another one - that's the app rounding the program's exact weight to what you can actually load with your equipment. It's been a common source of confusion: why is my working weight different from the target? Why is it suddenly 0?
+
+Now the rounded weight is underlined, and you can tap it to get the full explanation: how the target was calculated (e.g. as a percentage of your 1RM), how it was converted between kg and lb, and how it was matched to your equipment - the bar weight, the plates per side, or the closest fixed dumbbell.
+
+If the equipment is marked as "Is Assisting" (like an assisted pull-up machine, where added weight makes the exercise easier), the explanation will call that out too - accidentally enabling it is the usual reason weights unexpectedly drop to 0.
+
+Hopefully that'll help to understand why it crosses out the weights!
+
+---
+date: 2026-07-13
+title: More accurate volume for two-dumbbell exercises
+---
+
+Volume and total weight now count both dumbbells for exercises you load with a pair - like dumbbell shoulder press, bench press, rows, lunges, and split squats. The weight you enter for these is per-dumbbell, so previously we only counted one and undercounted the volume by half. Now it's doubled to reflect the real load moved.
+
+This changes how numbers look in your volume graphs - your dumbbell volume will double compared to before. So, it's somewhat a breaking change.
+
+If a particular exercise doesn't fit (say you do a single-dumbbell variation), you can turn this off per-exercise: go to Exercise Stats, and toggle "Two weights (count both)".
+
+---
+date: 2026-07-10
+title: Added exercise variations (progression ladders)
+---
+
+A single program exercise can now hold multiple movements, and you can switch between them - either automatically as you progress, or by hand. Great for calisthenics progressions, where you graduate from an easier movement to a harder one once you can do enough reps.
+
+List the movements separated by `|` in the exercise name. The current one is marked with `!` (the first is current by default):
+
+```liftoscript
+Split Squat | ! Bulgarian Split Squat | Pistol Squat / 3x8 0lb
+```
+
+To advance automatically, use the new `exerciseVariationIndex` variable in a progress script - it moves to the next movement when your condition is met:
+
+```liftoscript
+Squat | Pistol Squat | Front Squat / 3x8 0lb / progress: custom() {~
+  if (completedReps >= reps) {
+    exerciseVariationIndex += 1
+  }
+~}
+```
+
+You can also add, remove, reorder, and switch variations right from the Edit Program Exercise screen - enable "Exercise Variations" from the 3-dot menu. The sets, reps, and progress logic are shared across all movements; only the movement itself changes.
+
+Note that if you had a custom exercise with `|` or `!` in the name, it will be replaced to `-` character. If you program used `!` or `|` in the exercise names - you may need to tweak it, there's a migration that tries to fix it automatically, but it may miss some cases.
+
+---
+date: 2026-07-01
+title: Added time-based exercises and intervals/circuits support
+---
+
+You can now time the set itself, not just the rest after it. Great for planks, timed cardio, or any "hold for X seconds" exercise. Use the `setTimer|restTimer` syntax:
+
+```liftoscript
+Plank / 3x1 0lb 60s|30s
+```
+
+That's 3 sets of plank, holding each for 60s, then resting 30s. Add `+` to count up past the target instead of stopping automatically (like `30s+|60s`). Add `auto` to auto-advance to the next set when the rest ends - which is how you build circuits like EMOM or Tabata:
+
+```liftoscript
+// EMOM - 5 rounds, 5 reps, 1-minute window
+Power Clean / 5x5 135lb 60s|0s auto
+// Tabata - 8 rounds of 20s work / 10s rest
+Squat, Bodyweight / 8x1+ 0lb 20s|10s auto
+```
+
+In the UI (in the app, in Live Activity / Live Update, and in Apple Watch as well), you'll get a set timer modal if the current set has time.
+
+Read more in the [docs](internal:/docs/liftoscript). You need an iOS/Android native app update (from App Store / Google Play) to get this feature.
+
+---
 date: 2026-06-17
 title: Added Apple Watch complications
 ---

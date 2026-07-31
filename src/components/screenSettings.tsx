@@ -207,6 +207,11 @@ function ScreenSettingsInner(props: IProps): JSX.Element {
         shouldShowRightArrow={true}
         onClick={() => props.dispatch(Thunk_pushScreen("measurements"))}
       />
+      <MenuItem
+        name="Sleep & Nutrition"
+        shouldShowRightArrow={true}
+        onClick={() => props.dispatch(Thunk_pushScreen("sleepNutrition"))}
+      />
 
       <GroupHeader name="Workout" topPadding={true} />
       <MenuItem

@@ -1,5 +1,4 @@
-import { IThunk, IDispatch } from "./types";
-import { Standalone_localMode } from "../config/standalone";
+import { IThunk, IDispatch } from "./types";
 import type { NavigationAction } from "@react-navigation/native";
 import { IScreen, IScreenData, IScreenParams } from "../models/screen";
 import type { INavigateOpts } from "../navigation/navigationService";
@@ -54,7 +53,10 @@ import {
   ILength,
   ICustomExercise,
   IImportSession,
+  IProgramState,
 } from "../types";
+import { IPlannerProgramExercise } from "../pages/planner/models/types";
+import { IByExercise } from "../pages/planner/plannerEvaluator";
 import { CollectionUtils_compact, CollectionUtils_setAt } from "../utils/collection";
 import { ImportExporter_exportStorage, ImportExporter_getExportedProgram } from "../lib/importexporter";
 import { Storage_mergeStorage, Storage_isChanged, Storage_get, Storage_setAffiliate } from "../models/storage";
@@ -66,8 +68,10 @@ import { CSV_toString } from "../utils/csv";
 import { Exporter_toFile } from "../utils/exporter";
 import { DateUtils_formatYYYYMMDD, DateUtils_format } from "../utils/date";
 import { getInitialState } from "./reducer";
-import { IndexedDBUtils_get, IndexedDBUtils_remove, IndexedDBUtils_set } from "../utils/indexeddb";
+import { IndexedDBUtils_get, IndexedDBUtils_set } from "../utils/indexeddb";
+import { Account_getAll, IAccount } from "../models/account";
 import { WhatsNew_updateStorage } from "../models/whatsnewUtils";
+import { OnloadModal_getNext, OnloadModal_shouldShowHearAboutUs } from "../models/onloadModal";
 import { Screen_shouldConfirmNavigation } from "../models/screen";
 import {
   Subscriptions_listOfSubscriptions,
@@ -81,7 +85,6 @@ import {
 import {
   SendMessage_isIos,
   SendMessage_toIosWithResult,
-  SendMessage_toAndroidWithResult,
   SendMessage_toIos,
   SendMessage_print,
   SendMessage_toAndroid,
@@ -101,12 +104,15 @@ import { ClipboardUtils_copy } from "../utils/clipboard";
 import {
   Progress_getProgress,
   Progress_getProgressById,
+  Progress_isSetTimerCheckDue,
+  Progress_getFirstIncompleteWorkoutSet,
   Progress_updateTimer,
   Progress_getCurrentProgress,
   Progress_isCurrent,
   Progress_stop,
   Progress_scheduleTimerNotification,
 } from "../models/progress";
+import { Reps_findNextEntryAndSetIndex } from "../models/set";
 import { NativeTimerBridge_stopTimer } from "../utils/nativeTimerBridge";
 import { NativeWorkoutBridge_discardWorkout } from "../utils/nativeWorkoutBridge";
 import { IImportLinkData, ImportFromLink_importFromLink } from "../utils/importFromLink";
@@ -118,6 +124,7 @@ import { UrlUtils_build } from "../utils/url";
 import { ImportFromLiftosaur_convertLiftosaurCsvToHistoryRecords } from "../utils/importFromLiftosaur";
 import { ImportFromHevy_convertHevyCsvToHistoryRecords } from "../utils/importFromHevy";
 import { Sync_getStorageUpdate2 } from "../utils/sync";
+import { PerfProbe_isTarget } from "../utils/perfSetCompleteProbe";
 import {
   ObjectUtils_values,
   ObjectUtils_filter,
@@ -125,7 +132,7 @@ import {
   ObjectUtils_omit,
   ObjectUtils_keys,
 } from "../utils/object";
-import { EditStats_uploadHealthStats } from "../models/editStats";
+import { EditStats_uploadDailyMetrics, EditStats_uploadHealthStats } from "../models/editStats";
 import { HealthSync_eligibleForAppleHealth, HealthSync_eligibleForGoogleHealth } from "../lib/healthSync";
 import {
   PlannerProgram_generateFullText,
@@ -205,6 +212,47 @@ export function Thunk_googleSignIn(cb?: (state: IState) => void): IThunk {
   };
 }
 
+export interface IEmailAuthResult {
+  error?: string;
+  providers?: string[];
+  confirmationSent?: boolean;
+}
+
+export function Thunk_emailAuth(
+  mode: "signin" | "signup",
+  email: string,
+  password: string,
+  cb: (result: IEmailAuthResult, state: IState) => void
+): IThunk {
+  return async (dispatch, getState, env) => {
+    dispatch(Thunk_postevent(`email-${mode}`));
+    const state = getState();
+    const userId = state.user?.id || state.storage.tempUserId;
+    const result = await load(dispatch, "Logging in", () => {
+      return mode === "signup"
+        ? env.service.emailSignUp(email, password, userId)
+        : env.service.emailSignIn(email, password, userId);
+    });
+    if (result.type === "success") {
+      await load(dispatch, "Signing in", () => handleLogin(dispatch, result.response, env.service.client, userId));
+      dispatch(Thunk_sync2());
+      cb({}, getState());
+    } else if (result.type === "confirmation_sent") {
+      cb({ confirmationSent: true }, getState());
+    } else {
+      cb({ error: result.error, providers: result.providers }, getState());
+    }
+  };
+}
+
+export function Thunk_forgotPassword(email: string, cb: (result: IEmailAuthResult) => void): IThunk {
+  return async (dispatch, getState, env) => {
+    dispatch(Thunk_postevent("email-forgot-password"));
+    const result = await load(dispatch, "Sending email", () => env.service.forgotPassword(email));
+    cb(result);
+  };
+}
+
 export function Thunk_postevent(action: string, extra?: Record<string, string | number>): IThunk {
   return async (dispatch, getState, env) => {
     lg(action, extra, env.service, getState().user?.id || getState().storage.tempUserId);
@@ -269,7 +317,7 @@ export function Thunk_appleSignIn(cb?: (state: IState) => void): IThunk {
   };
 }
 
-export function Thunk_log(action: string): IThunk {
+export function Thunk_log(action: string, detail?: string): IThunk {
   return async (dispatch, getState, env) => {
     const state = getState();
     if (!state.nosync) {
@@ -278,16 +326,28 @@ export function Thunk_log(action: string): IThunk {
         action,
         state.storage.affiliates,
         Subscriptions_listOfSubscriptions(state.storage.subscription),
-        () => {
-          updateState(
-            dispatch,
-            [lb<IState>().p("storage").p("subscription").p("key").record(undefined)],
-            "Clear subscription key"
-          );
-        },
-        state.storage.subscription.key,
         state.storage.referrer,
-        state.storage.landingPage
+        state.storage.landingPage,
+        detail
+      );
+    }
+  };
+}
+
+export function Thunk_verifySubscriptionKey(): IThunk {
+  return async (dispatch, getState, env) => {
+    const state = getState();
+    const key = state.storage.subscription.key;
+    if (state.nosync || key == null) {
+      return;
+    }
+    const userId = state.user?.id || state.storage.tempUserId;
+    const { clear } = await env.service.verifySubscriptionKey(userId, key);
+    if (clear) {
+      updateState(
+        dispatch,
+        [lb<IState>().p("storage").p("subscription").p("key").record(undefined)],
+        "Clear subscription key"
       );
     }
   };
@@ -297,17 +357,23 @@ export function Thunk_logOut(cb?: () => void): IThunk {
   return async (dispatch, getState, env) => {
     dispatch(Thunk_postevent("log-out"));
     if (getState().user?.id) {
+      const isDebugAccount = AdminDebug_isDebugAccountId(getState().storage.tempUserId);
       await env.service.signout();
       dispatch({ type: "Logout" });
       updateState(dispatch, [lb<IState>().p("lastSyncedStorage").record(undefined)], "Clear last sync on logout");
-      SendMessage_toIos({ type: "accountLogout" });
-      try {
-        await KeychainStore_clearAuthToken();
-      } catch (e) {
-        lg("ls-keychain-clear-auth-fail", { error: e instanceof Error ? e.message : String(e) });
+      // A debug sandbox borrows the device's native auth, so logging out of it must only drop the
+      // debug session - tearing down the keychain/Google/watch auth here would wipe the admin's own
+      // real persisted login.
+      if (!isDebugAccount) {
+        SendMessage_toIos({ type: "accountLogout" });
+        try {
+          await KeychainStore_clearAuthToken();
+        } catch (e) {
+          lg("ls-keychain-clear-auth-fail", { error: e instanceof Error ? e.message : String(e) });
+        }
+        await SignOut_google();
+        NativeWatchBridge_sendClearAuthToWatch();
       }
-      await SignOut_google();
-      NativeWatchBridge_sendClearAuthToWatch();
     }
     if (cb) {
       cb();
@@ -377,7 +443,15 @@ async function _sync2(
         const historyVersions = result.storage._versions?.history as { deleted?: Record<string, number> } | undefined;
         const serverDeletedHistory = Object.keys(historyVersions?.deleted || {}).length;
 
+        const probeMergeTarget = PerfProbe_isTarget();
+        const probeMergeT0 = probeMergeTarget ? Date.now() : 0;
         const newStorage = Storage_mergeStorage(currentStorage, result.storage, getState().deviceId);
+        if (probeMergeTarget) {
+          lg("perf-sync-merge", {
+            merge_ms: Date.now() - probeMergeT0,
+            history_len: currentStorage.history?.length ?? 0,
+          });
+        }
         const mergedHistoryLen = newStorage.history?.length ?? 0;
 
         if (currentHistoryLen > 0 && mergedHistoryLen < currentHistoryLen) {
@@ -458,7 +532,15 @@ async function _sync2(
     }
   } else {
     dispatch(Thunk_postevent("sync-storage-update", { force: args?.force ? "true" : "false" }));
+    const probeSyncTarget = PerfProbe_isTarget();
+    const probeSyncT0 = probeSyncTarget ? Date.now() : 0;
     const storageUpdate = Sync_getStorageUpdate2(state.storage, state.lastSyncedStorage, state.deviceId);
+    if (probeSyncTarget) {
+      lg("perf-sync", {
+        build_ms: Date.now() - probeSyncT0,
+        has_update: storageUpdate.storage != null ? "true" : "false",
+      });
+    }
     if (args?.force || storageUpdate.storage) {
       const lastSyncedStorage = state.storage;
       const result = await env.service.postSync({
@@ -489,56 +571,40 @@ function getDeletedStats(state: IState): number[] {
 
 async function _syncHealthKit(dispatch: IDispatch, getState: () => IState, env: IEnv): Promise<void> {
   const settings = getState().storage.settings;
-  if (SendMessage_isIos()) {
-    dispatch(Thunk_postevent("read-apple-health"));
-    const result = await SendMessage_toIosWithResult({
-      type: "getHealthKitData",
-      weightunit: settings.units,
-      lengthunit: settings.lengthUnits,
-      anchor: settings.appleHealthAnchor,
-    });
-    if (result != null) {
-      EditStats_uploadHealthStats("ios", dispatch, result, getState().storage.settings, getDeletedStats(getState()));
-    }
-    return;
-  }
-  if (SendMessage_isAndroid()) {
-    dispatch(Thunk_postevent("read-google-health"));
-    const result = await SendMessage_toAndroidWithResult({
-      type: "getHealthKitData",
-      weightunit: settings.units,
-      lengthunit: settings.lengthUnits,
-      anchor: settings.googleHealthAnchor,
-    });
-    if (result != null) {
-      EditStats_uploadHealthStats(
-        "android",
-        dispatch,
-        result,
-        getState().storage.settings,
-        getDeletedStats(getState())
-      );
-    }
-    return;
-  }
   if (!env.health) {
     return;
   }
   const platform: "ios" | "android" = Platform.OS === "ios" ? "ios" : "android";
-  dispatch(Thunk_postevent(platform === "ios" ? "read-apple-health" : "read-google-health"));
-  const anchor = platform === "ios" ? settings.appleHealthAnchor : settings.googleHealthAnchor;
-  const result = await env.health.syncMeasurements({
-    anchor,
-    weightUnit: settings.units,
-    lengthUnit: settings.lengthUnits,
-  });
-  EditStats_uploadHealthStats(
-    platform,
-    dispatch,
-    { data: result },
-    getState().storage.settings,
-    getDeletedStats(getState())
-  );
+  const syncMeasurements =
+    platform === "ios" ? settings.appleHealthSyncMeasurements : settings.googleHealthSyncMeasurements;
+  const syncSleepNutrition =
+    platform === "ios" ? settings.appleHealthSyncSleepNutrition : settings.googleHealthSyncSleepNutrition;
+
+  if (syncMeasurements) {
+    dispatch(Thunk_postevent(platform === "ios" ? "read-apple-health" : "read-google-health"));
+    const anchor = platform === "ios" ? settings.appleHealthAnchor : settings.googleHealthAnchor;
+    const result = await env.health.syncMeasurements({
+      anchor,
+      weightUnit: settings.units,
+      lengthUnit: settings.lengthUnits,
+    });
+    EditStats_uploadHealthStats(
+      platform,
+      dispatch,
+      { data: result },
+      getState().storage.settings,
+      getDeletedStats(getState())
+    );
+  }
+
+  if (syncSleepNutrition) {
+    dispatch(Thunk_postevent(platform === "ios" ? "read-apple-health-daily" : "read-google-health-daily"));
+    // iOS reads a 90-day rolling window; Android is 30 because Health Connect won't return records older
+    // than 30 days without the READ_HEALTH_DATA_HISTORY permission (which we don't request).
+    const windowDays = platform === "android" ? 30 : 90;
+    const daily = await env.health.syncDailyMetrics({ windowDays, metrics: ["sleep", "calories", "protein"] });
+    EditStats_uploadDailyMetrics(platform, dispatch, daily);
+  }
 }
 
 export function Thunk_saveWorkoutToHealth(args: {
@@ -623,9 +689,12 @@ export function Thunk_syncHealthKit(cb?: () => void): IThunk {
       }
       return;
     }
+    const s = state.storage.settings;
+    const appleSyncEnabled = s.appleHealthSyncMeasurements || s.appleHealthSyncSleepNutrition;
+    const googleSyncEnabled = s.googleHealthSyncMeasurements || s.googleHealthSyncSleepNutrition;
     if (
-      !(state.storage.settings.appleHealthSyncMeasurements && HealthSync_eligibleForAppleHealth()) &&
-      !(state.storage.settings.googleHealthSyncMeasurements && HealthSync_eligibleForGoogleHealth())
+      !(appleSyncEnabled && HealthSync_eligibleForAppleHealth()) &&
+      !(googleSyncEnabled && HealthSync_eligibleForGoogleHealth())
     ) {
       if (cb != null) {
         cb();
@@ -794,6 +863,163 @@ export function Thunk_completeSetExternal(
   };
 }
 
+function resolveTimedSetProgramContext(
+  state: IState,
+  progress: IHistoryRecord,
+  entryIndex: number | undefined
+): { programExercise: IPlannerProgramExercise | undefined; otherStates: IByExercise<IProgramState> | undefined } {
+  const entry = entryIndex != null ? progress.entries[entryIndex] : undefined;
+  if (!entry) {
+    return { programExercise: undefined, otherStates: undefined };
+  }
+  const program = Program_getFullProgram(state, progress.programId);
+  const evaluatedProgram = program ? Program_evaluate(program, state.storage.settings) : undefined;
+  const programExercise = evaluatedProgram
+    ? Program_getProgramExercise(progress.day, evaluatedProgram, entry.programExerciseId)
+    : undefined;
+  return { programExercise, otherStates: evaluatedProgram?.states };
+}
+
+// Record the running set timer and complete the set. The model (Progress_completeSetAction) derives the
+// elapsed time from when the clock started, decides whether to advance/close+rest, and may open the
+// AMRAP modal — this thunk just resolves the program context the update script needs.
+export function Thunk_recordSetTimer(
+  entryIndex: number,
+  setIndex: number,
+  keepTiming: boolean,
+  recordedSeconds?: number
+): IThunk {
+  return async (dispatch, getState, env) => {
+    const state = getState();
+    const progress = Progress_getProgress(state);
+    if (!progress) {
+      return;
+    }
+    // A native Live Activity / Live Update "Stop & Record"/"Log & keep" tap can arrive stale — the timed set
+    // already auto-closed at its target, or the user double-tapped an old notification. The set timer modal is
+    // then gone (or points at a different set), and completing here would fall through to normal set toggling
+    // and flip the already-completed set back off. Ignore it and just resync the surface that sent it.
+    const setTimerModal = progress.setTimer;
+    if (setTimerModal == null || setTimerModal.entryIndex !== entryIndex || setTimerModal.setIndex !== setIndex) {
+      dispatch(Thunk_refreshLiveActivity());
+      return;
+    }
+    const { programExercise, otherStates } = resolveTimedSetProgramContext(state, progress, entryIndex);
+    dispatch({
+      type: "CompleteSetAction",
+      entryIndex,
+      setIndex,
+      mode: "workout",
+      programExercise,
+      otherStates,
+      forceUpdateEntryIndex: false,
+      isExternal: false,
+      isPlayground: false,
+      keepSetTimerRunning: keepTiming,
+      // From the live activity this is the elapsed at the moment of the tap (native-computed) — use it
+      // instead of recomputing from startedAt at processing time, which drifts if the app woke late.
+      recordedSeconds,
+    });
+  };
+}
+
+// Polled by the set-timer banner and the rest timer every tick. Cheap no-op unless a time threshold has
+// actually been crossed (auto work timer hit its target, or auto rest expired), in which case the model
+// advances/completes. Gated by the pure predicate so we don't evaluate the program every second.
+export function Thunk_checkSetTimer(): IThunk {
+  return async (dispatch, getState, env) => {
+    const state = getState();
+    const progress = Progress_getProgress(state);
+    if (!progress || !Progress_isSetTimerCheckDue(progress, Date.now())) {
+      return;
+    }
+    const hadSetTimer = progress.setTimer != null;
+    const entryIndex = progress.setTimer?.entryIndex ?? progress.timerEntryIndex;
+    const { programExercise, otherStates } = resolveTimedSetProgramContext(state, progress, entryIndex);
+    dispatch({ type: "CheckSetTimerAction", programExercise, otherStates });
+    // The set timer just closed — into rest, into an AMRAP prompt, or ended (an EMOM that rolls straight to
+    // the next set keeps setTimer, so it stays silent, matching the watch). Play the set→rest cue.
+    const after = Progress_getProgress(getState());
+    const setTimerClosed = hadSetTimer && (after?.setTimer == null || after?.amrapModal != null);
+    if (setTimerClosed && getState().adminKey == null) {
+      const settings = getState().storage.settings;
+      env.audio.play(settings.volume, !!settings.vibration, "set-timer-end");
+    }
+    // The predicate above guarantees the model just advanced (auto work timer hit target, or auto rest
+    // expired → next set timer). Re-push so the live activity/live update follows along — otherwise an
+    // in-app poll advances the UI while the lock-screen stays on the expired rest until the next update.
+    dispatch(Thunk_refreshLiveActivity());
+  };
+}
+
+// Re-pushes the live activity for the current workout state (set timer / rest / next set). Used on app
+// foreground (after Thunk_checkSetTimer reconciles the model) to resync the live activity, which can't
+// advance itself while the app is suspended.
+export function Thunk_refreshLiveActivity(): IThunk {
+  return async (dispatch, getState, env) => {
+    const state = getState();
+    const progress = Progress_getProgress(state);
+    if (!progress || !Progress_isCurrent(progress)) {
+      return;
+    }
+    const program = Program_getFullProgram(state, progress.programId);
+    const settings = state.storage.settings;
+    const subscription = state.storage.subscription;
+    const setTimerModal = progress.setTimer;
+    if (setTimerModal != null) {
+      // Centralization in LiveActivityManager_updateLiveActivity reads setTimerModal, so the entry/set
+      // passed here are overridden — it renders the set-timer view.
+      LiveActivityManager_updateProgressLiveActivity(
+        program,
+        progress,
+        settings,
+        subscription,
+        setTimerModal.entryIndex,
+        setTimerModal.setIndex,
+        undefined,
+        undefined
+      );
+      return;
+    }
+    if (progress.timer != null && progress.timerSince != null) {
+      // The rest timer belongs to the just-completed set (progress.timerSetIndex), but the live activity
+      // must show the NEXT set so its complete button targets a set that can actually be completed — pushing
+      // the completed set's index makes the button a no-op. Mirrors screenWorkout/restTimer; the rest timer
+      // itself is read from progress.timer/timerSince inside updateLiveActivity, so it still shows.
+      const next =
+        progress.timerEntryIndex != null
+          ? Reps_findNextEntryAndSetIndex(progress, progress.timerEntryIndex, progress.timerMode ?? "workout")
+          : undefined;
+      LiveActivityManager_updateProgressLiveActivity(
+        program,
+        progress,
+        settings,
+        subscription,
+        next?.entryIndex ?? progress.timerEntryIndex,
+        next?.setIndex ?? progress.timerSetIndex,
+        progress.timer,
+        progress.timerSince
+      );
+      return;
+    }
+    const next = Progress_getFirstIncompleteWorkoutSet(progress);
+    if (next != null) {
+      const entry = progress.entries[next.entryIndex];
+      const absoluteSetIndex = entry.warmupSets.length + next.setIndex;
+      LiveActivityManager_updateProgressLiveActivity(
+        program,
+        progress,
+        settings,
+        subscription,
+        next.entryIndex,
+        absoluteSetIndex,
+        undefined,
+        undefined
+      );
+    }
+  };
+}
+
 export function Thunk_playAudioNotification(): IThunk {
   return async (dispatch, getState, env) => {
     if (getState().adminKey == null) {
@@ -815,13 +1041,16 @@ export function Thunk_handleWatchStorageMerge(storageJson: string, isLiveActivit
       const wasOnProgressScreen = env.getCurrentScreenData?.()?.name === "progress";
       const hadProgress = state.storage.progress && state.storage.progress.length > 0;
 
-      // Merge watch storage with phone storage
+      // Merge watch storage with phone storage. amrapModal now lives on progress (not progress.ui), so it
+      // version-merges across devices like setTimer — no manual propagation past the `ui` exclusion needed.
       let mergedStorage = Storage_mergeStorage(state.storage, watchStorage, state.deviceId);
 
-      // progress.ui is excluded from version-based merging, so amrapModal set by
-      // live activity mutations gets dropped. Propagate it explicitly.
-      const watchAmrapModal = watchStorage.progress?.[0]?.ui?.amrapModal;
-      if (isLiveActivity && watchAmrapModal && mergedStorage.progress?.[0]) {
+      // currentEntryIndex syncs, but the workout pager only scrolls when forceUpdateEntryIndex (a device-local
+      // ui flag) flips — without this a watch-driven exercise switch highlights the thumbnail but never scrolls
+      // the pager to it. Flip the flag when the merge actually moved the shown exercise.
+      const prevEntryIndex = state.storage.progress?.[0]?.currentEntryIndex ?? 0;
+      const mergedEntryIndex = mergedStorage.progress?.[0]?.currentEntryIndex ?? 0;
+      if (mergedEntryIndex !== prevEntryIndex && mergedStorage.progress?.[0]) {
         mergedStorage = {
           ...mergedStorage,
           progress: [
@@ -829,9 +1058,7 @@ export function Thunk_handleWatchStorageMerge(storageJson: string, isLiveActivit
               ...mergedStorage.progress[0],
               ui: {
                 ...mergedStorage.progress[0].ui,
-                amrapModal: watchAmrapModal,
-                isExternal: watchStorage.progress[0].ui?.isExternal,
-                forceUpdateEntryIndex: watchStorage.progress[0].ui?.forceUpdateEntryIndex,
+                forceUpdateEntryIndex: !mergedStorage.progress[0].ui?.forceUpdateEntryIndex,
               },
             },
           ],
@@ -937,7 +1164,7 @@ export function Thunk_handleWatchStorageMerge(storageJson: string, isLiveActivit
 }
 
 export function Thunk_reloadStorageFromDisk(): IThunk {
-  return async (dispatch, getState) => {
+  return async (dispatch, getState, env) => {
     try {
       const currentAccount = (await IndexedDBUtils_get("current_account")) as string | undefined;
       if (!currentAccount) {
@@ -945,15 +1172,14 @@ export function Thunk_reloadStorageFromDisk(): IThunk {
         return;
       }
 
-      const rawStorage = (await IndexedDBUtils_get(`liftosaur_${currentAccount}`)) as string | undefined;
-      if (!rawStorage) {
+      const parsed = await env.persistence.load(`liftosaur_${currentAccount}`);
+      if (parsed == null) {
         SendMessage_print("reloadStorageFromDisk: no storage found");
         return;
       }
 
-      const parsed = JSON.parse(rawStorage);
-      const storage: IStorage = parsed?.storage;
-      const lastSyncedStorage: IStorage | undefined = parsed?.lastSyncedStorage;
+      const storage: IStorage | undefined = parsed.storage;
+      const lastSyncedStorage: IStorage | undefined = parsed.lastSyncedStorage;
 
       if (!storage) {
         SendMessage_print("reloadStorageFromDisk: invalid storage format");
@@ -1025,6 +1251,7 @@ export function Thunk_startProgramDay(programId?: string): IThunk {
       if (program != null) {
         const newProgress = Program_nextHistoryRecord(program, state.storage.settings, state.storage.stats);
         updateState(dispatch, [lb<IState>().p("storage").p("progress").record([newProgress])], "Create new progress");
+        dispatch(Thunk_log("ls-start-workout"));
         dispatch(Thunk_pushScreen("progress", { id: newProgress.id }, { tab: "workout" }));
       } else {
         Dialog_alert("No currently selected program");
@@ -1050,6 +1277,7 @@ export function Thunk_pushToEditProgramExercise(
         : undefined
       : editProgramState?.current.program || (programId != null ? Program_getProgram(state, programId) : undefined);
     if (currentProgram && !Program_isEmpty(currentProgram) && programId) {
+      dispatch(Thunk_log("ls-program-edit-exercise-screen"));
       const { navigateTo } = await getNavigationService();
       navigateTo("editProgramExercise", { programId, key, dayData, fromWorkout: isFromWorkout });
     } else {
@@ -1083,6 +1311,7 @@ export function Thunk_pushScreen<T extends IScreen>(
       "programPreview",
       "setupequipment",
       "setupplates",
+      "hearaboutus",
       "programselect",
     ];
     if (getState().storage.currentProgramId == null && screensWithoutCurrentProgram.indexOf(screen) === -1) {
@@ -1138,7 +1367,6 @@ export function Thunk_maybeRequestSignup(): IThunk {
       const signupRequests = state.storage.signupRequests;
       const lastsignupRequest = signupRequests[signupRequests.length - 1];
       if (
-        !Standalone_localMode &&
         state.user?.id == null &&
         history.length > 8 &&
         signupRequests.length < 3 &&
@@ -1150,6 +1378,34 @@ export function Thunk_maybeRequestSignup(): IThunk {
     } catch (error) {
       const e = error as Error;
       Rollbar.error(e);
+    }
+  };
+}
+
+export function Thunk_maybeShowOnloadModal(): IThunk {
+  return async (dispatch, getState) => {
+    try {
+      const next = OnloadModal_getNext(getState());
+      if (next === "whatsnew") {
+        updateState(dispatch, [lb<IState>().p("showWhatsNew").record(true)], "Show what's new on load");
+      } else if (next === "hearaboutus") {
+        dispatch(Thunk_maybeRequestHearAboutUs());
+      }
+    } catch (error) {
+      Rollbar.error(error as Error);
+    }
+  };
+}
+
+export function Thunk_maybeRequestHearAboutUs(): IThunk {
+  return async (dispatch, getState) => {
+    try {
+      if (OnloadModal_shouldShowHearAboutUs(getState())) {
+        dispatch(Thunk_postevent("request-hear-about-us"));
+        updateState(dispatch, [lb<IState>().p("showHearAboutUs").record(true)], "Show hear-about-us");
+      }
+    } catch (error) {
+      Rollbar.error(error as Error);
     }
   };
 }
@@ -1359,7 +1615,7 @@ export function Thunk_exportHistoryToCSV(): IThunk {
     dispatch(Thunk_postevent("export-history-to-csv"));
     const state = getState();
     const csv = CSV_toString(History_exportAsCSV(state.storage.history, state.storage.settings));
-    Exporter_toFile(`vmr-lift_${DateUtils_formatYYYYMMDD(Date.now())}.csv`, csv);
+    Exporter_toFile(`liftosaur_${DateUtils_formatYYYYMMDD(Date.now())}.csv`, csv);
   };
 }
 
@@ -1375,7 +1631,7 @@ export function Thunk_exportProgramsToText(): IThunk {
       text += PlannerProgram_generateFullText(program.planner.weeks);
       text += `\n\n\n`;
     }
-    Exporter_toFile(`vmr-lift_all_programs_${DateUtils_formatYYYYMMDD(Date.now())}.txt`, text);
+    Exporter_toFile(`liftosaur_all_programs_${DateUtils_formatYYYYMMDD(Date.now())}.txt`, text);
   };
 }
 
@@ -1650,10 +1906,16 @@ export function Thunk_createAccount(): IThunk {
 export function Thunk_deleteAccount(id: string, cb?: () => void): IThunk {
   return async (dispatch, getState, env) => {
     dispatch(Thunk_postevent("delete-local-account"));
-    await IndexedDBUtils_remove(`liftosaur_${id}`);
+    await env.persistence.delete(`liftosaur_${id}`);
     if (cb) {
       cb();
     }
+  };
+}
+
+export function Thunk_fetchAccounts(cb: (accounts: IAccount[]) => void): IThunk {
+  return async (dispatch, getState, env) => {
+    cb(await Account_getAll(env.persistence));
   };
 }
 
@@ -1681,11 +1943,11 @@ export function Thunk_switchAccount(id: string): IThunk {
     dispatch(
       Thunk_logOut(async () => {
         dispatch(Thunk_postevent("switch-account"));
-        const rawStorage = (await IndexedDBUtils_get(`liftosaur_${id}`)) as string | undefined;
-        if (rawStorage != null) {
-          const result = Storage_get(JSON.parse(rawStorage)?.storage);
+        const localStorage = await env.persistence.load(`liftosaur_${id}`);
+        if (localStorage?.storage != null) {
+          const result = Storage_get(localStorage.storage);
           if (result.success) {
-            const newState = await getInitialState(env.service.client, { rawStorage, deviceId: getState().deviceId });
+            const newState = await getInitialState(env.service.client, { localStorage, deviceId: getState().deviceId });
             dispatch({ type: "ReplaceState", state: newState });
             dispatch(Thunk_fetchInitial());
           } else {
@@ -1744,14 +2006,81 @@ export function Thunk_adminLoginAsUser(
     // request can be attributed to anyone. The admin's local account stays in IndexedDB.
     await env.service.signout();
     const localStorage: ILocalStorage = { storage: debugStorage };
-    const rawStorage = JSON.stringify(localStorage);
     await IndexedDBUtils_set("current_account", debugStorage.tempUserId);
-    await IndexedDBUtils_set(`liftosaur_${debugStorage.tempUserId}`, rawStorage);
-    const newState = await getInitialState(env.service.client, { rawStorage, deviceId: getState().deviceId });
+    await env.persistence.saveFull(`liftosaur_${debugStorage.tempUserId}`, localStorage);
+    const newState = await getInitialState(env.service.client, { localStorage, deviceId: getState().deviceId });
     dispatch({ type: "ReplaceState", state: newState });
     dispatch(Thunk_fetchInitial());
     const { navigateTo } = await getNavigationService();
     navigateTo("main", undefined, { tab: "home" });
+  };
+}
+
+export function Thunk_adminEnableServerSync(adminKey: string): IThunk {
+  return async (dispatch, getState, env) => {
+    const tempUserId = getState().storage.tempUserId;
+    if (!AdminDebug_isDebugAccountId(tempUserId)) {
+      return;
+    }
+    const session = await load(dispatch, "Creating debug session", () =>
+      env.service.createDebugSession(tempUserId, adminKey)
+    );
+    if (session == null) {
+      Dialog_alert("Failed to create debug session (check the admin key)");
+      return;
+    }
+    // Enablement is intentionally session-only and fails closed: the set-cookie authenticates this
+    // session via the cookie jar, but on restart getInitialState reloads any debug_ account
+    // force-nosync, so sync turns back off and must be re-enabled here. We deliberately do NOT write
+    // the debug session to the keychain - that slot is the real login auth (+ watch bridge), and a
+    // debug token must never outlive the session or leak to the watch.
+    updateState(
+      dispatch,
+      [
+        lb<IState>().p("nosync").record(false),
+        lb<IState>().p("user").record({ id: session.userId, email: session.email }),
+      ],
+      "Debug: enable server sync"
+    );
+    dispatch(Thunk_sync2({ force: true, log: true }));
+  };
+}
+
+export function Thunk_debugTestLogin(
+  apiKey?: string,
+  cb?: (result: { userId: string; email: string; apiKeyBound: boolean } | { error: string }) => void
+): IThunk {
+  return async (dispatch, getState, env) => {
+    try {
+      const userId = `test_${UidFactory_generateUid(8)}`;
+      const email = `${userId}@test.liftosaur.com`;
+      const result = await env.service.googleSignIn(email, userId, { forcedUserEmail: email });
+      if (result.email == null) {
+        cb?.({ error: "Sign in failed - forceuseremail only works against a local dev server" });
+        return;
+      }
+      // Setup before handleLogin so a failure (e.g. non-local backend without the dev route)
+      // doesn't leave the app committed to a half-provisioned account. The signin above already
+      // replaced the session cookie though, so on failure also sign out rather than keep
+      // HTTP-layer auth pointing at the throwaway account.
+      let setup: { apiKeyBound: boolean; key: string };
+      try {
+        setup = await env.service.postSetupTestAccount(apiKey, result.session);
+      } catch (e) {
+        await env.service.signout().catch(() => undefined);
+        throw e;
+      }
+      await handleLogin(dispatch, result, env.service.client, getState().user?.id || getState().storage.tempUserId);
+      updateState(
+        dispatch,
+        [lb<IState>().p("storage").p("subscription").p("key").record(setup.key)],
+        "Set test account subscription key"
+      );
+      dispatch(Thunk_sync2());
+      cb?.({ userId: result.user_id, email: result.email, apiKeyBound: setup.apiKeyBound });
+    } catch (e) {
+      cb?.({ error: e instanceof Error ? e.message : String(e) });
+    }
   };
 }
 
@@ -1785,6 +2114,7 @@ export function Thunk_fetchInitial(): IThunk {
     if (AdminDebug_isDebugAccountId(getState().storage.tempUserId)) {
       return;
     }
+    dispatch(Thunk_verifySubscriptionKey());
     if (getState().storage.subscription.apple.length > 0) {
       dispatch(Thunk_postevent("check-apple-subscription"));
       const receipt = getState().storage.subscription.apple[0]?.value;
@@ -2541,5 +2871,3 @@ export function Thunk_openManageSubscriptions(): IThunk {
     }
   };
 }
-
-

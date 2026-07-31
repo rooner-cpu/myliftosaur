@@ -9,10 +9,24 @@ import OSLog
 import WatchKit
 import AVFoundation
 import WidgetKit
+import HealthKit
 
 struct CompletedSetInfo: Equatable {
     let entryIndex: Int
     let setIndex: Int
+}
+
+enum HealthIntent {
+    case sync                                   // reconcile session against current storage
+    case finish(save: Bool)                     // workout finished; end (and maybe save) the session
+    case discard                                // workout discarded; end the session without saving
+    case startFromPhone(HKWorkoutConfiguration) // phone initiated a workout (startWatchApp toHandle)
+}
+
+private enum ActiveWorkoutState {
+    case storageUnavailable    // engine/storage not ready yet — true state unknown, don't touch the session
+    case none                  // storage ready, no active workout
+    case active
 }
 
 @MainActor
@@ -31,10 +45,16 @@ class WorkoutManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
     @Published var isPaused = false
     @Published var workoutTime: TimeInterval = 0
     @Published var restTimer: WatchRestTimer?
+    @Published var setTimerModal: WatchSetTimerModal?
     @Published var heartRate: Double?
     @Published var hasSubscription: Bool = true  // Default to true to avoid flash of premium screen
     private var workoutIntervals: [[Double?]] = []  // [[startMs, endMs or nil]]
     private var heartRateCancellable: AnyCancellable?
+
+    // Serializes all HealthKit session changes so a start can never interleave with a stop
+    // across an await — see withHealthLock / reconcileHealth.
+    private var healthOpBusy = false
+    private var healthOpWaiters: [CheckedContinuation<Void, Never>] = []
 
     // Rest timer completion monitoring
     private var restTimerMonitor: Timer?
@@ -195,21 +215,93 @@ class WorkoutManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
             workoutStartTime = nil
             isPaused = false
             workoutTime = 0
-            restTimer = nil
+            resetWorkoutTimers()
         }
         if workout != nil {
             await loadWorkoutStatus()
             await loadRestTimer()
-            // Start HK session in background - don't block UI loading
-            Logger.sync.info(">>> loadActiveWorkout: about to start HK session task")
-            Task {
-                let recovered = await HealthKitManager.shared.recoverActiveSession()
-                Logger.sync.info(">>> loadActiveWorkout: recoverActiveSession returned \(recovered), isSessionActive=\(HealthKitManager.shared.isSessionActive)")
-                if !recovered && !HealthKitManager.shared.isSessionActive {
-                    Logger.sync.info(">>> loadActiveWorkout: calling startWorkoutSession")
-                    await HealthKitManager.shared.startWorkoutSession()
+            await loadSetTimerModal()
+        }
+        // Storage is the single source of truth for the HK session. Reconcile (serialized, reads
+        // fresh storage) instead of starting/stopping inline: it starts a session when a workout
+        // is active and tears down an orphan when it isn't, and can't race a concurrent finish.
+        Task { await reconcileHealth(.sync) }
+    }
+
+    // MARK: - HealthKit session reconciliation
+
+    /// Serializes HealthKit session changes (a simple async semaphore-1 with FIFO baton-passing)
+    /// so a start can never interleave with a stop across an await.
+    private func withHealthLock<T>(_ body: () async -> T) async -> T {
+        if healthOpBusy {
+            await withCheckedContinuation { healthOpWaiters.append($0) }
+        } else {
+            healthOpBusy = true
+        }
+        let result = await body()
+        if let next = healthOpWaiters.first {
+            healthOpWaiters.removeFirst()
+            next.resume()
+        } else {
+            healthOpBusy = false
+        }
+        return result
+    }
+
+    /// Like reconcileHealth(.finish) but returns the real HealthKit outcome, so a finish can be
+    /// answered with what actually happened instead of a prediction.
+    func finishHealthSession(save: Bool) async -> HKFinishResult {
+        await withHealthLock {
+            // The workout is over — authoritative. Recover first so a session left running across
+            // a relaunch (not yet held locally) is actually ended.
+            _ = await HealthKitManager.shared.recoverActiveSession()
+            return await HealthKitManager.shared.endWorkoutSession(save: save)
+        }
+    }
+
+    func reconcileHealth(_ intent: HealthIntent) async {
+        await withHealthLock {
+            switch intent {
+            case .sync:
+                switch await currentActiveWorkoutState() {
+                case .storageUnavailable:
+                    // Can't tell whether a workout is active (e.g. cold launch before the engine
+                    // finishes loading). Do nothing rather than risk ending a recovered session as
+                    // a false orphan — loadActiveWorkout fires another .sync once storage is ready.
+                    Logger.sync.info(">>> reconcile(.sync): storage/engine not ready, skipping")
+                case .none:
+                    await HealthKitManager.shared.reconcileSession(hasActiveWorkout: false)
+                case .active:
+                    await HealthKitManager.shared.reconcileSession(hasActiveWorkout: true)
                 }
+            case .finish(let save):
+                // The workout is over — authoritative. Recover first so a session left running
+                // across a relaunch (not yet held locally) is actually ended.
+                _ = await HealthKitManager.shared.recoverActiveSession()
+                await HealthKitManager.shared.endWorkoutSession(save: save)
+            case .discard:
+                _ = await HealthKitManager.shared.recoverActiveSession()
+                await HealthKitManager.shared.endWorkoutSession(save: false)
+            case .startFromPhone(let configuration):
+                // Recover first so a cross-launch orphan is found and torn down
+                // (startWorkoutSessionFromPhone ends an existing session) before we create the new
+                // one — otherwise HealthKit may reject the new session or the orphan keeps running.
+                _ = await HealthKitManager.shared.recoverActiveSession()
+                await HealthKitManager.shared.startWorkoutSessionFromPhone(configuration: configuration)
             }
+        }
+    }
+
+    private func currentActiveWorkoutState() async -> ActiveWorkoutState {
+        guard let engine = engine, let storageJson = loadStorage() else {
+            return .storageUnavailable
+        }
+        switch await engine.getProgress(storageJson: storageJson) {
+        case .success(let workout):
+            return workout != nil ? .active : .none
+        case .failure:
+            // Engine error — real state unknown, so treat as unavailable, not "no workout".
+            return .storageUnavailable
         }
     }
 
@@ -229,6 +321,16 @@ class WorkoutManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
         isStartingWorkout = false
     }
 
+    /// Clears all transient timer UI/state tied to an active workout. Call from every teardown path so a
+    /// rest-timer or set-timer sheet can't linger for a workout that no longer exists (e.g. the phone
+    /// finished/discarded while a set-timer sheet was open on the watch).
+    private func resetWorkoutTimers() {
+        restTimer = nil
+        restTimerMonitor?.invalidate()
+        restTimerMonitor = nil
+        setTimerModal = nil
+    }
+
     func discardWorkout() async {
         Logger.workout.info(" discardWorkout() called")
         guard await withStorageMutation(
@@ -242,16 +344,14 @@ class WorkoutManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
         }
         Logger.workout.info(" discardWorkout: storage mutation succeeded")
         // End HealthKit session in background - don't block navigation
-        Task { await HealthKitManager.shared.endWorkoutSession(save: false) }
+        Task { await reconcileHealth(.discard) }
         WatchConnectivityManager.shared.sendEndWorkout()
         // Refresh the next workout before clearing activeWorkout, so the complication
         // reflects the real next workout instead of the just-discarded one.
         await loadNextWorkout()
         activeWorkout = nil
         workoutStartTime = nil
-        restTimer = nil
-        restTimerMonitor?.invalidate()
-        restTimerMonitor = nil
+        resetWorkoutTimers()
         Logger.workout.info(" discardWorkout() completed")
     }
 
@@ -261,9 +361,7 @@ class WorkoutManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
         workoutStartTime = nil
         isPaused = false
         workoutTime = 0
-        restTimer = nil
-        restTimerMonitor?.invalidate()
-        restTimerMonitor = nil
+        resetWorkoutTimers()
         // The phone ended the workout; reload the next workout so the complication
         // stops showing the ended one (synced phone storage already reflects it).
         Task { await loadNextWorkout() }
@@ -302,16 +400,17 @@ class WorkoutManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
         await loadNextWorkout()
 
         Task {
-            await HealthKitManager.shared.endWorkoutSession(save: saveToHealth)
+            let result = await finishHealthSession(save: saveToHealth)
+            var extra = ["saved": String(result.saved), "trigger": "watch"]
+            if let reason = result.reason { extra["reason"] = reason }
+            WatchEventManager.shared.logNativeEvent(name: "watch-hk-finish", extra: extra)
         }
         WatchConnectivityManager.shared.sendEndWorkout()
         activeWorkout = nil
         workoutStartTime = nil
         isPaused = false
         workoutTime = 0
-        restTimer = nil
-        restTimerMonitor?.invalidate()
-        restTimerMonitor = nil
+        resetWorkoutTimers()
         Logger.workout.info(" finishWorkout: returning summary (nil=\(summary == nil))")
         return summary
     }
@@ -347,6 +446,28 @@ class WorkoutManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
         isCompletingSet = false
         guard result != nil else { return }
         await loadActiveWorkout()
+    }
+
+    func updateCompletedSetTimer(entryIndex: Int, setIndex: Int, seconds: Int) async {
+        guard await withStorageMutation(
+            operation: { engine, storageJson, deviceId in
+                await engine.updateCompletedSetTimer(storageJson: storageJson, deviceId: deviceId, entryIndex: entryIndex, setIndex: setIndex, seconds: seconds)
+            },
+            operationName: "edit set timer"
+        ) != nil else { return }
+        await loadActiveWorkout()
+    }
+
+    // Persist + sync the shown exercise so the phone follows the watch. No reload: the cursor is the view's
+    // source of truth, and the JS side no-ops when unchanged so a cursor move that merely reflects an incoming
+    // remote change doesn't loop back.
+    func setCurrentEntryIndex(_ entryIndex: Int) async {
+        _ = await withStorageMutation(
+            operation: { engine, storageJson, deviceId in
+                await engine.setCurrentEntryIndex(storageJson: storageJson, deviceId: deviceId, entryIndex: entryIndex)
+            },
+            operationName: "set current entry index"
+        )
     }
 
     func getNextEntryAndSetIndex(entryIndex: Int, setIndex: Int) async -> WatchNextEntryAndSetIndex? {
@@ -400,6 +521,46 @@ class WorkoutManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
         await withStorageSilentOptional { engine, storageJson in
             await engine.getAmrapModal(storageJson: storageJson)
         }
+    }
+
+    func loadSetTimerModal() async {
+        setTimerModal = await withStorageSilentOptional { engine, storageJson in
+            await engine.getSetTimerModal(storageJson: storageJson)
+        }
+    }
+
+    func recordSetTimer(entryIndex: Int, setIndex: Int, keepTiming: Bool, recordedSeconds: Int) async {
+        guard await withStorageMutation(
+            operation: { engine, storageJson, deviceId in
+                await engine.recordSetTimer(storageJson: storageJson, deviceId: deviceId, entryIndex: entryIndex, setIndex: setIndex, keepTiming: keepTiming, recordedSeconds: recordedSeconds)
+            },
+            operationName: "record set timer"
+        ) != nil else { return }
+        await loadActiveWorkout()
+    }
+
+    func closeSetTimer() async {
+        guard await withStorageMutation(
+            operation: { engine, storageJson, deviceId in
+                await engine.closeSetTimer(storageJson: storageJson, deviceId: deviceId)
+            },
+            operationName: "close set timer"
+        ) != nil else { return }
+        await loadActiveWorkout()
+    }
+
+    // Polled every tick while a timed set / rest is active. The cheap predicate gates the persisting +
+    // syncing mutation so `auto` circuits advance on time without writing storage every second.
+    func checkSetTimer() async {
+        guard let engine = engine, let storageJson = loadStorage() else { return }
+        guard await engine.isSetTimerCheckDue(storageJson: storageJson) else { return }
+        guard await withStorageMutation(
+            operation: { engine, storageJson, deviceId in
+                await engine.checkSetTimer(storageJson: storageJson, deviceId: deviceId)
+            },
+            operationName: "check set timer"
+        ) != nil else { return }
+        await loadActiveWorkout()
     }
 
     func adjustRestTimer(adjustment: Int) async {
@@ -512,9 +673,20 @@ class WorkoutManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
     }
 
     private func playCompletionSound() {
+        playSound(resource: "notification")
+    }
+
+    func playSetTimerEndSound() {
+        // Haptic fires regardless of volume (it's separate from the sound), like the rest-timer cue, so the
+        // set→rest transition is still felt when muted.
+        WKInterfaceDevice.current().play(.notification)
+        playSound(resource: "set-timer-end")
+    }
+
+    private func playSound(resource: String) {
         guard cachedVolume > 0 else { return }
-        guard let url = Bundle.main.url(forResource: "notification", withExtension: "m4r") else {
-            Logger.workout.warning("notification.m4r not found in bundle")
+        guard let url = Bundle.main.url(forResource: resource, withExtension: "m4r") else {
+            Logger.workout.warning("\(resource).m4r not found in bundle")
             return
         }
         do {
@@ -743,9 +915,13 @@ class WorkoutManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
         error = nil
         isPaused = false
         workoutTime = 0
-        restTimer = nil
+        resetWorkoutTimers()
         workoutIntervals = []
         hasSubscription = true  // Reset to true until we know otherwise
+
+        // Account switch wipes storage, so any running HK session belongs to the old account and
+        // is now an orphan. End it explicitly — a .sync would only see "storage unavailable" and bail.
+        Task { await reconcileHealth(.discard) }
 
         // Reload will show "no program" state until new storage arrives
         Task {

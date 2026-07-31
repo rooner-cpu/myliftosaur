@@ -1,4 +1,4 @@
-import { JSX, useEffect } from "react";
+import { JSX, useEffect, useRef } from "react";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { useAppState } from "../StateContext";
 import { ModalScreenContainer } from "../ModalScreenContainer";
@@ -13,6 +13,7 @@ import {
   Program_fullProgram,
 } from "../../models/program";
 import { buildPlaygroundDispatch, getPlaygroundProgress } from "./navModalPlaygroundUtils";
+import { useClearOnModalRemove } from "../useClearOnModalRemove";
 import type { IRootStackParamList } from "../types";
 
 export function NavModalAmrap(): JSX.Element {
@@ -69,7 +70,16 @@ export function NavModalAmrap(): JSX.Element {
       Program_getFirstProgramExercise(evaluatedProgram, entry?.programExerciseId)
     : undefined;
 
-  const onClose = (): void => {
+  const didGoBackRef = useRef(false);
+  const goBackOnce = (): void => {
+    if (didGoBackRef.current) {
+      return;
+    }
+    didGoBackRef.current = true;
+    navigation.goBack();
+  };
+
+  const cancelAmrap = (): void => {
     modalDispatch({
       type: "ChangeAMRAPAction",
       amrapValue: undefined,
@@ -89,13 +99,30 @@ export function NavModalAmrap(): JSX.Element {
     if (!isPlayground) {
       Progress_forceUpdateEntryIndex(dispatch);
     }
-    navigation.goBack();
   };
 
-  const shouldGoBack = !progress;
+  const onClose = (): void => {
+    cancelAmrap();
+    goBackOnce();
+  };
+
+  // A native back/gesture dismissal skips onClose/onDone (which set didGoBackRef via goBackOnce), so cancel here to
+  // clear amrapModal — otherwise the playground bridge's edge guard can never re-open it. Guard against clobbering a
+  // committed "Done" value, whose goBackOnce already ran.
+  useClearOnModalRemove(() => {
+    if (didGoBackRef.current) {
+      return;
+    }
+    didGoBackRef.current = true;
+    cancelAmrap();
+  });
+
+  // Also dismiss when the synced amrapModal clears — e.g. the same prompt was answered on the watch. Playground
+  // progress has no amrapModal field, so only gate on it for the workout context.
+  const shouldGoBack = !progress || (context === "workout" && progress.amrapModal == null);
   useEffect(() => {
     if (shouldGoBack) {
-      navigation.goBack();
+      goBackOnce();
     }
   }, [shouldGoBack]);
 
@@ -118,7 +145,7 @@ export function NavModalAmrap(): JSX.Element {
             if (!isPlayground) {
               Progress_forceUpdateEntryIndex(dispatch);
             }
-            navigation.goBack();
+            goBackOnce();
           }}
         />
       </FormSheet>

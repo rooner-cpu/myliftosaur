@@ -8,6 +8,14 @@ import { RollbarUtils_config } from "./utils/rollbar";
 import { AppAttribution_get } from "./utils/appAttribution";
 import { Ota_init, Ota_activeBundleIdSync } from "./utils/ota";
 import { RN_COMMIT_HASH, RN_FULL_COMMIT_HASH } from "./rnBuildInfo";
+import {
+  localdomain,
+  localapidomain,
+  localstreamingapidomain,
+  localport,
+  localapiport,
+  localstreamingapiport,
+} from "./localdomain";
 
 declare let Rollbar: RB;
 
@@ -16,11 +24,15 @@ declare let __HOST__: string;
 // Inject compile-time constants that are normally provided by webpack's DefinePlugin.
 // Metro doesn't have an equivalent, so we attach them to globalThis at module init.
 // Toggle the `useLocal` flag for local development vs production.
+// Dev hosts come from localdomain.js so each git worktree's native build targets
+// its own dev/api/streaming ports (see scripts/worktree-create.sh).
 const useLocal = __DEV__;
-const nativeHost = useLocal ? "https://local.liftosaur.com:8080" : "https://www.liftosaur.com";
-const nativeApiHost = useLocal ? "https://local-api.liftosaur.com:3000" : "https://api3.liftosaur.com";
+const nativeHost = useLocal ? `https://${localdomain}.liftosaur.com:${localport}` : "https://www.liftosaur.com";
+const nativeApiHost = useLocal
+  ? `https://${localapidomain}.liftosaur.com:${localapiport}`
+  : "https://api3.liftosaur.com";
 const nativeStreamingApiHost = useLocal
-  ? "https://local-streaming-api.liftosaur.com:3001"
+  ? `https://${localstreamingapidomain}.liftosaur.com:${localstreamingapiport}`
   : "https://streaming-api.liftosaur.com";
 
 const globalAny = globalThis as unknown as {
@@ -212,11 +224,15 @@ import { navigationRef } from "./navigation/navigationRef";
 import { ScreenRemovalCleanup_subscribe } from "./navigation/screenRemovalCleanup";
 import { navigateToModal } from "./navigation/navigationService";
 import { getCurrentScreenData } from "./navigation/navigationService";
-import { IndexedDBUtils_initializeForSafari, IndexedDBUtils_get } from "./utils/indexeddb";
+import { IndexedDBUtils_initializeForSafari } from "./utils/indexeddb";
+import { Persistence } from "./utils/persistence";
 import { Settings_applyTheme, Settings_getTheme } from "./models/settings";
 import { TextSize_apply } from "./utils/textSize";
 import { AppContext } from "./components/appContext";
 import { ActionSheetHost } from "./components/actionSheetHost";
+import { PromptHost } from "./components/promptHost";
+import { Toast } from "./components/toast";
+import { useOnloadModals } from "./navigation/useOnloadModals";
 import { SystemBars } from "react-native-edge-to-edge";
 import { activateKeepAwake, deactivateKeepAwake } from "@sayem314/react-native-keep-awake";
 import { ImportExporter_handleUniversalLink } from "./lib/importexporter";
@@ -230,13 +246,16 @@ import {
   Thunk_iapHandlePurchaseError,
   Thunk_completeSetExternal,
   Thunk_updateTimer,
+  Thunk_recordSetTimer,
+  Thunk_checkSetTimer,
+  Thunk_refreshLiveActivity,
   Thunk_handleWatchStorageMerge,
   Thunk_reloadStorageFromDisk,
   Thunk_postevent,
+  Thunk_debugTestLogin,
 } from "./ducks/thunks";
 import { IapAdapter } from "./utils/iap";
 import { HealthAdapter } from "./utils/health";
-import { WhatsNew_doesHaveNewUpdates } from "./models/whatsnew";
 import { History_getGraphsAggregates, History_getHomeAggregates } from "./models/history";
 import { PerfLongTasks_start } from "./utils/perfLongTasks";
 import { usePerfFrameSampling, PerfFrameSampler_flush } from "./utils/perfFrameCallback";
@@ -255,21 +274,23 @@ GoogleSignin.configure({
   offlineAccess: false,
 });
 
-function AppInner(props: { initialState: IState }): React.JSX.Element {
+function AppInner(props: { initialState: IState; persistence: Persistence }): React.JSX.Element {
+  const persistence = props.persistence;
   const env = useMemo<IEnv>(
     () => ({
       service: new Service(fetch),
       audio: new AudioInterface(),
       queue: new AsyncQueue(),
+      persistence,
       navigationRef,
       getCurrentScreenData,
       iap: new IapAdapter(),
       health: new HealthAdapter(),
     }),
-    []
+    [persistence]
   );
   const service = env.service;
-  const reducer = useMemo(() => reducerWrapper(true), []);
+  const reducer = useMemo(() => reducerWrapper(true, persistence), [persistence]);
   const onActions = useMemo(() => defaultOnActions(env), [env]);
   const [state, dispatch] = useThunkReducer<IState, IAction, IEnv>(reducer, props.initialState, env, onActions);
   const stateRef = useRef(state);
@@ -290,6 +311,16 @@ function AppInner(props: { initialState: IState }): React.JSX.Element {
 
   useEffect(() => {
     return ScreenRemovalCleanup_subscribe(dispatch);
+  }, []);
+
+  useEffect(() => {
+    if (__DEV__) {
+      // setTimeout so a CDP-eval caller returns before the heavy login work saturates the JS
+      // thread — evaluating it inline can segfault Hermes' debugger VM
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (globalThis as any).debugLogin = (apiKey?: string) =>
+        new Promise((resolve) => setTimeout(() => dispatch(Thunk_debugTestLogin(apiKey, resolve)), 0));
+    }
   }, []);
 
   useEffect(() => {
@@ -421,6 +452,11 @@ function AppInner(props: { initialState: IState }): React.JSX.Element {
         env.queue.clearStaleOperations();
         dispatch(Thunk_sync2({ force: true }));
         dispatch(Thunk_syncHealthKit());
+        // JS is suspended while backgrounded, so a set timer can overrun its target unprocessed. On wake,
+        // catch the model up (auto-complete the timed set, backdating the rest it starts), then re-push the
+        // live activity — it can't advance itself while suspended, so this is its source of truth.
+        dispatch(Thunk_checkSetTimer());
+        dispatch(Thunk_refreshLiveActivity());
       } else if (next === "background") {
         dispatch(Thunk_postevent("sleep"));
         env.queue.abortAll();
@@ -585,6 +621,13 @@ function AppInner(props: { initialState: IState }): React.JSX.Element {
         }
         const addSeconds = event.addSeconds ?? 0;
         dispatch(Thunk_updateTimer(Math.max(0, timer + addSeconds), entryIndex, setIndex, false));
+      } else if (event.action === "recordSetTimer") {
+        dispatch(Thunk_recordSetTimer(entryIndex, setIndex, !!event.keepTiming, event.elapsedSeconds));
+      } else if (event.action === "checkSetTimer") {
+        // A native task fired at the set timer's target (the app is alive but JS timers were throttled):
+        // run the same reconcile the in-app poll does. Thunk_checkSetTimer re-pushes the live activity
+        // itself when it advances, so no separate refresh is needed here.
+        dispatch(Thunk_checkSetTimer());
       }
     });
   }, [dispatch]);
@@ -615,17 +658,7 @@ function AppInner(props: { initialState: IState }): React.JSX.Element {
     prevShowCorruptedState.current = showCorruptedState;
   }, [isNavReady, showCorruptedState]);
 
-  const shouldShowWhatsNew = WhatsNew_doesHaveNewUpdates(state.storage.whatsNew) || state.showWhatsNew;
-  const prevShouldShowWhatsNew = useRef(false);
-  useEffect(() => {
-    if (!isNavReady) {
-      return;
-    }
-    if (shouldShowWhatsNew && state.storage.whatsNew != null && !prevShouldShowWhatsNew.current) {
-      navigateToModal("whatsnewModal");
-    }
-    prevShouldShowWhatsNew.current = !!(shouldShowWhatsNew && state.storage.whatsNew != null);
-  }, [isNavReady, shouldShowWhatsNew, state.storage.whatsNew]);
+  useOnloadModals(state, dispatch, isNavReady);
 
   useEffect(() => {
     if (!isNavReady || !currentScreenName) {
@@ -633,7 +666,11 @@ function AppInner(props: { initialState: IState }): React.JSX.Element {
     }
     const tourId = TourConfigs_findTourId(stateRef.current, true);
     if (tourId && tourId !== stateRef.current.tour?.id) {
-      updateState(dispatch, [lb<IState>().p("tour").record({ id: tourId, enforced: false })], "Auto-start a tour");
+      updateState(
+        dispatch,
+        [lb<IState>().p("tour").record({ id: tourId, enforced: false, screenData: getCurrentScreenData() })],
+        "Auto-start a tour"
+      );
     }
   }, [isNavReady, currentScreenName, dispatch]);
 
@@ -695,6 +732,8 @@ function AppInner(props: { initialState: IState }): React.JSX.Element {
                     />
                   )}
                   <ActionSheetHost />
+                  <PromptHost />
+                  <Toast toast={state.toast} dispatch={dispatch} />
                 </CustomKeyboardProvider>
               </ActiveSheetHeightProvider>
             </ModalStateProvider>
@@ -707,14 +746,15 @@ function AppInner(props: { initialState: IState }): React.JSX.Element {
 
 export function App(): React.JSX.Element {
   const [initialState, setInitialState] = useState<IState | null>(null);
+  const [persistence] = useState(() => new Persistence());
 
   useEffect(() => {
     async function load(): Promise<void> {
       await IndexedDBUtils_initializeForSafari();
       const key = await getIdbKey();
-      const rawStorage = await IndexedDBUtils_get(key);
+      const localStorage = await persistence.load(key);
       const url = new URL(`${__HOST__}/app/`);
-      const state = await getInitialState(fetch, { rawStorage: rawStorage as string | undefined, url });
+      const state = await getInitialState(fetch, { localStorage, url });
       Settings_applyTheme(Settings_getTheme(state.storage.settings));
       TextSize_apply(state.storage.settings.textSize ?? 16);
       if (state.storage.history.length > 0) {
@@ -742,7 +782,7 @@ export function App(): React.JSX.Element {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <AppInner initialState={initialState} />
+        <AppInner initialState={initialState} persistence={persistence} />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

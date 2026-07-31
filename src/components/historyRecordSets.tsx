@@ -10,10 +10,18 @@ import { IHistoryEntryPersonalRecords } from "../models/history";
 import { StyledText, StyledText_remToPx } from "../utils/styledText";
 import { useRem } from "../utils/useRem";
 import { Tailwind_semantic, Tailwind_colors } from "../utils/tailwindConfig";
+import { TimeUtils_formatMMSS } from "../utils/time";
 
 function isSameDisplaySet(a: IDisplaySet, b: IDisplaySet): boolean {
   return (
-    a.reps === b.reps && a.weight === b.weight && a.rpe === b.rpe && a.askWeight === b.askWeight && a.timer === b.timer
+    a.reps === b.reps &&
+    a.weight === b.weight &&
+    a.rpe === b.rpe &&
+    a.askWeight === b.askWeight &&
+    a.timer === b.timer &&
+    a.setTimer === b.setTimer &&
+    a.isOverflowSetTimer === b.isOverflowSetTimer &&
+    a.auto === b.auto
   );
 }
 
@@ -95,6 +103,7 @@ export const HistoryRecordSet = memo(function HistoryRecordSet(props: IHistoryRe
         : sem.text.error;
   const rpeColor = isNext ? secondary : set.isRpeFailed ? sem.text.error : sem.text.success;
   const timerColor = isNext ? secondary : purple;
+  const autoColor = isNext ? secondary : sem.syntax.auto;
   const dataCy = isNext
     ? "history-entry-sets-next"
     : set.isCompleted
@@ -123,10 +132,35 @@ export const HistoryRecordSet = memo(function HistoryRecordSet(props: IHistoryRe
     builder.add(" @", { fontSize: xs, color: rpeColor });
     builder.add(`${set.rpe}`, { color: rpeColor }, "history-entry-rpe");
   }
-  if (set.timer != null) {
+  if (set.setTimer != null) {
+    builder.add(" ");
+    if (isNext) {
+      builder.add(`${set.setTimer}`, { fontWeight: "600", color: timerColor }, "history-entry-set-timer");
+      builder.add("s", { fontSize: xs, color: timerColor });
+      builder.add(`${set.isOverflowSetTimer ? "+" : ""}|`, { fontWeight: "600", color: timerColor });
+      if (set.timer != null) {
+        builder.add(`${set.timer}`, { fontWeight: "600", color: timerColor }, "history-entry-timer");
+        builder.add("s", { fontSize: xs, color: timerColor });
+      } else {
+        builder.add("?", { fontWeight: "600", color: timerColor });
+      }
+    } else if (set.setTimer < 60) {
+      builder.add(`${set.setTimer}`, { fontWeight: "600", color: timerColor }, "history-entry-set-timer");
+      builder.add("s", { fontSize: xs, color: timerColor });
+    } else {
+      builder.add(
+        TimeUtils_formatMMSS(set.setTimer * 1000),
+        { fontWeight: "600", color: timerColor },
+        "history-entry-set-timer"
+      );
+    }
+  } else if (set.timer != null) {
     builder.add(" ");
     builder.add(`${set.timer}`, { color: timerColor }, "history-entry-timer");
     builder.add("s", { fontSize: xs, color: timerColor });
+  }
+  if (set.auto) {
+    builder.add(" auto", { color: autoColor }, "history-entry-auto");
   }
   const built = builder.build();
 

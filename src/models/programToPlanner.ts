@@ -39,7 +39,7 @@ import {
   IPlannerProgramExerciseWarmupSet,
 } from "../pages/planner/models/types";
 import { IEvaluatedProgram, Program_getProgramExercise } from "./program";
-import { Exercise_get, Exercise_fullName } from "./exercise";
+import { Exercise_get, Exercise_fullName, Exercise_buildName } from "./exercise";
 import { CollectionUtils_compact } from "../utils/collection";
 import { PP_iterate2 } from "./pp";
 import { PlannerKey_fromFullName, PlannerKey_fromPlannerExercise } from "../pages/planner/plannerKey";
@@ -49,11 +49,13 @@ interface IPlannerToProgram2Globals {
   weight?: IWeight | IPercentage;
   rpe?: number;
   timer?: number;
+  setTimer?: number;
+  isOverflowSetTimer?: boolean;
   logRpe?: boolean;
   askWeight?: boolean;
 }
 
-type IDereuseDecision = "sets" | "weight" | "rpe" | "timer" | "progress" | "update";
+type IDereuseDecision = "sets" | "weight" | "rpe" | "timer" | "setTimer" | "progress" | "update";
 
 export interface IPlannerToProgramConvertOpts {
   renameMapping?: Record<string, { to: string; dayData?: Required<IDayData> }>;
@@ -164,6 +166,16 @@ export class ProgramToPlanner {
           if (reuseSet ? programSet.timer !== reuseSet.timer : globals.timer !== reusedGlobals.timer) {
             if (globals.timer != null) {
               dereuseDecisions.add("timer");
+            } else {
+              dereuseDecisions.add("sets");
+            }
+          }
+          if (
+            programSet.setTimer !== reuseSet?.setTimer ||
+            !!programSet.isOverflowSetTimer !== !!reuseSet?.isOverflowSetTimer
+          ) {
+            if (globals.setTimer != null) {
+              dereuseDecisions.add("setTimer");
             } else {
               dereuseDecisions.add("sets");
             }
@@ -446,7 +458,16 @@ export class ProgramToPlanner {
                   if (dereuseDecisions.includes("rpe") && globals.rpe != null) {
                     overriddenGlobals.push(`@${n(globals.rpe)}${globals.logRpe ? "+" : ""}`);
                   }
-                  if (dereuseDecisions.includes("timer") && globals.timer != null) {
+                  if (
+                    globals.setTimer != null &&
+                    (dereuseDecisions.includes("setTimer") ||
+                      dereuseDecisions.includes("timer") ||
+                      dereuseDecisions.includes("sets"))
+                  ) {
+                    // The rest timer is embedded in the setTimer|rest token, so any timer-ish change
+                    // (and materialized sets, which skip per-set timer tokens) restates the whole token.
+                    overriddenGlobals.push(this.setTimerGlobalToStr(globals));
+                  } else if (dereuseDecisions.includes("timer") && globals.timer != null) {
                     overriddenGlobals.push(`${n(globals.timer)}s`);
                   }
                   if (overriddenGlobals.length > 0) {
@@ -468,7 +489,9 @@ export class ProgramToPlanner {
                   if (globals.rpe != null) {
                     globalsStr.push(`@${globals.rpe}${globals.logRpe ? "+" : ""}`);
                   }
-                  if (globals.timer != null) {
+                  if (globals.setTimer != null) {
+                    globalsStr.push(this.setTimerGlobalToStr(globals));
+                  } else if (globals.timer != null) {
                     globalsStr.push(`${globals.timer}s`);
                   }
                   if (globalsStr.length > 0) {
@@ -557,7 +580,23 @@ export class ProgramToPlanner {
   }
 
   private getExerciseName(programExercise: IPlannerProgramExercise): string {
-    if (programExercise.exerciseType) {
+    const variations = programExercise.exerciseVariations;
+    if (variations != null && variations.length > 1) {
+      const currentIndex = variations.findIndex((v) => v.isCurrent);
+      const activeIndex = currentIndex === -1 ? 0 : currentIndex;
+      const parts = variations.map((variation, i) => {
+        const label = i === 0 ? programExercise.label : undefined;
+        const segment = variation.exerciseType
+          ? Exercise_fullName(Exercise_get(variation.exerciseType, this.settings.exercises), this.settings, label)
+          : Exercise_buildName(variation.name, this.settings, label);
+        return `${i === activeIndex && i > 0 ? "! " : ""}${segment}`;
+      });
+      let name = parts.join(" | ");
+      if (programExercise.order > 0) {
+        name = `${name}[${programExercise.order}]`;
+      }
+      return name;
+    } else if (programExercise.exerciseType) {
       const exercise = Exercise_get(programExercise.exerciseType, this.settings.exercises);
       let name = Exercise_fullName(exercise, this.settings, programExercise.label);
       if (programExercise.order > 0) {
@@ -696,6 +735,8 @@ export class ProgramToPlanner {
         weight: globals?.weight ?? reusedGlobals.weight,
         rpe: globals?.rpe ?? reusedGlobals.rpe,
         timer: globals?.timer ?? reusedGlobals.timer,
+        setTimer: globals?.setTimer ?? reusedGlobals.setTimer,
+        isOverflowSetTimer: globals?.isOverflowSetTimer ?? reusedGlobals.isOverflowSetTimer,
         logRpe: globals?.logRpe ?? reusedGlobals.logRpe,
         askWeight: globals?.askWeight ?? reusedGlobals.askWeight,
       };
@@ -705,7 +746,27 @@ export class ProgramToPlanner {
     const firstLogRpe = !!variations[0]?.sets[0]?.logRpe;
     const firstAskWeight = !!variations[0]?.sets[0]?.askWeight;
     const firstTimer = variations[0]?.sets[0]?.timer;
+    // When any set carries a set timer, its rest is embedded in the setTimer|rest token, so the rest
+    // timer must not also be lifted to a global (a global would override the embedded rest on re-parse).
+    const hasAnySetTimer = variations.some((v) => v.sets.some((s) => s.setTimer != null));
+    const firstSetTimer = variations[0]?.sets[0]?.setTimer;
+    const firstIsOverflowSetTimer = !!variations[0]?.sets[0]?.isOverflowSetTimer;
+    // A set timer is only liftable to a global together with its embedded rest, so the whole
+    // setTimer/overflow/rest tuple must be uniform across every set. Even then, keep the source's
+    // style: lift only if it was written as a global, or the sets are reused (where a global
+    // override is the only way to express a timer change without materializing the set list).
+    const setTimerIsGlobal =
+      firstSetTimer != null &&
+      (exercise.globals.setTimer != null || exercise.reuse != null) &&
+      variations.every((v) =>
+        v.sets.every(
+          (s) =>
+            s.setTimer === firstSetTimer && !!s.isOverflowSetTimer === firstIsOverflowSetTimer && s.timer === firstTimer
+        )
+      );
     return {
+      setTimer: setTimerIsGlobal ? firstSetTimer : undefined,
+      isOverflowSetTimer: setTimerIsGlobal ? firstIsOverflowSetTimer : undefined,
       weight:
         firstWeight != null &&
         variations.every((v) =>
@@ -721,7 +782,9 @@ export class ProgramToPlanner {
           : undefined,
       logRpe: variations.every((v) => v.sets.every((s) => s.rpe === firstRpe && !!s.logRpe)),
       timer:
-        firstTimer != null && variations.every((v) => v.sets.every((s) => s.timer === firstTimer))
+        (setTimerIsGlobal || !hasAnySetTimer) &&
+        firstTimer != null &&
+        variations.every((v) => v.sets.every((s) => s.timer === firstTimer))
           ? firstTimer
           : undefined,
     };
@@ -803,6 +866,12 @@ export class ProgramToPlanner {
     return "";
   }
 
+  private setTimerGlobalToStr(globals: IPlannerToProgram2Globals): string {
+    const overflow = globals.isOverflowSetTimer ? "+" : "";
+    const restPart = globals.timer != null ? `${n(Math.max(0, globals.timer))}s` : "?";
+    return `${n(Math.max(0, globals.setTimer ?? 0))}s${overflow}|${restPart}`;
+  }
+
   private variationToString(
     variation: IPlannerProgramExerciseEvaluatedSetVariation,
     globals: IPlannerToProgram2Globals,
@@ -830,8 +899,15 @@ export class ProgramToPlanner {
         setStr += set.rpe != null ? ` @${n(Math.max(0, set.rpe))}` : "";
         setStr += set.rpe != null && set.logRpe ? "+" : "";
       }
-      if (globals.timer == null) {
+      if (set.setTimer != null && globals.setTimer == null) {
+        const overflow = set.isOverflowSetTimer ? "+" : "";
+        const restPart = set.timer != null ? `${n(Math.max(0, set.timer))}s` : "?";
+        setStr += ` ${n(Math.max(0, set.setTimer))}s${overflow}|${restPart}`;
+      } else if (set.setTimer == null && globals.timer == null) {
         setStr += set.timer ? ` ${n(Math.max(0, set.timer))}s` : "";
+      }
+      if (set.auto) {
+        setStr += " auto";
       }
       if (set.label) {
         setStr += ` (${set.label})`;
@@ -852,6 +928,6 @@ export class ProgramToPlanner {
   private setToKey(set: IPlannerProgramExerciseEvaluatedSet): string {
     return `${set.maxrep}-${set.minrep}-${Weight_printNull(set.weight)}-${set.isAmrap}-${set.rpe}-${set.logRpe}-${
       set.timer
-    }-${set.label}-${set.askWeight}`;
+    }-${set.label}-${set.askWeight}-${set.setTimer}-${set.isOverflowSetTimer}-${set.auto}`;
   }
 }
